@@ -1,0 +1,7 @@
+﻿Division,DivisionScoreMin,DivisionScoreMax,WinScore,WinningStreakScoreBonus,LoseScore,NewSeasonScore,RewardList
+1,0,99,20,20,10,0,
+2,100,299,20,20,8,100,"13,50,15,5"
+3,300,599,20,20,6,200,"13,150,15,10"
+4,600,999,20,20,4,300,"13,300,16,1"
+5,1000,1499,20,20,2,450,"13,800,16,1"
+6,1500,99999,20,20,0,600,"13,2000,16,2"

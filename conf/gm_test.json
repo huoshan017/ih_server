@@ -1,0 +1,4 @@
+{
+	"GmServerIP":"127.0.0.1:39000",
+	"LogConfigFile" : "gm_test_tracer.json"
+}

@@ -1,0 +1,24 @@
+{
+	"HallServerGroups":
+	[
+		{
+			"GroupId":1,
+			"MinPid":0,
+			"MaxPid":1000000,
+			"ServerNum":1,
+			"Servers":
+			[
+				{
+					"ServerIdx":1,
+					"ServerId":1,
+					"ServerIP":"127.0.0.1:30100"
+				},
+				{
+					"ServerIdx":2,
+					"ServerId":2,
+					"ServerIP":"127.0.0.1:30101"
+				}
+			]
+		}
+	]
+}

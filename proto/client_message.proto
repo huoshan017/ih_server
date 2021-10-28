@@ -1,0 +1,2531 @@
+syntax = "proto3";
+
+package msg.client_message;
+
+//////////////////////////////////////错误码///////////////////////////////////
+
+enum E_ERR {
+	NONE    								= 0;
+	INTERNAL								= -1; // 内部错误
+	PLAYER_ACC_OR_PASSWORD_ERROR			= -2; // 账号或密码错误
+	PLAYER_NOT_EXIST						= -3; // 玩家不存在
+	PLAYER_ALREADY_LOGINED					= -4; // 玩家已经登陆
+	PLAYER_OTHER_PLACE_LOGIN				= -5; // 玩家在其他地方登陆
+	PLAYER_TOKEN_ERROR						= -6; // 令牌错误
+	PLAYER_SELECT_SERVER_NOT_FOUND			= -7; // 选择服务器不存在
+	PLAYER_ALREADY_SELECTED_SERVER			= -8; // 玩家已经选择过服务器
+	PLAYER_IS_OFFLINE						= -9; // 玩家已离线
+	PLAYER_SEND_TOO_FREQUENTLY				= -10; // 发送消息太频繁
+	PLAYER_GOLD_NOT_ENOUGH					= -11; // 金币不足
+	PLAYER_DIAMOND_NOT_ENOUGH				= -12; // 钻石不足
+	PLAYER_NAME_TOO_LONG					= -13; // 昵称过长
+	PLAYER_HEAD_TABLE_DATA_NOT_FOUND		= -14; // 头像配置不存在
+	PLAYER_NO_SUCH_HEAD						= -15; // 没有该头像
+	PLAYER_LEVEL_NOT_ENOUGH					= -16; // 等级不够
+	PLAYER_MUEST_RECONN_WITH_DISCONN_STATE  = -17; // 断开状态下必须先重连
+	PLAYER_MSG_ID_INVALID					= -18; // 消息号非法
+	PLAYER_MSG_ID_NOT_FOUND				 	= -19; // 消息号不存在
+	PLAYER_NOT_FOUND_BY_TOKEN				= -20; // 玩家对象不存在
+	PLAYER_TOKEN_NOT_FOUND					= -21; // 玩家令牌找不到
+	
+	// 账号
+	ACCOUNT_ALREADY_REGISTERED				= -100; // 账号已注册
+	ACCOUNT_IS_INVALID						= -101; // 账号名不合法
+	ACCOUNT_PASSWORD_INVALID				= -102; // 密码不合法
+	ACCOUNT_NOT_REGISTERED					= -103; // 账号未注册
+	ACCOUNT_NOT_GUEST						= -104; // 不是游客账号
+	ACCOUNT_NEW_BIND_ALREADY_EXISTS			= -105; // 新绑定账号已存在
+	ACCOUNT_NAME_MUST_DIFFRENT_TO_OLD		= -106; // 游客新绑定账号不能跟原来相同
+	ACCOUNT_ALREADY_BIND				    = -107; // 账号已绑定过
+	ACCOUNT_BE_BANNED						= -108; // 账号被封禁
+	ACCOUNT_AAID_DONT_EMPTY					= -109; // AAID不能为空
+	
+	// 战斗
+	PLAYER_SET_ATTACK_MEMBERS_FAILED		= -10000; // 设置进攻阵营失败
+	PLAYER_SET_DEFENSE_MEMBERS_FAILED		= -10001; // 设置防守阵营失败
+	PLAYER_IS_DEFENSING						= -10002; // 对方正在战斗
+	PLAYER_BATTLE_RECORD_NOT_FOUND			= -10003; // 战斗录像不存在
+	PLAYER_BATTLE_RECORD_FORBIDDEN_DELETE   = -10004; // 不能删除录像
+	PLAYER_BATTLE_RECORD_DATA_INVALID		= -10005; // 录像数据错误
+	PLAYER_TEAM_MEMBERS_IS_EMPTY		 	= -10006; // 阵型为空
+	PLAYER_TEAM_TYPE_INVALID                = -10007; // 阵型非法
+	PLAYER_PVP_TEAM_MEMBERS_TOO_MORE		= -10008; // PVP阵型人数过多
+	
+	// 物品装备
+	PLAYER_ITEM_NOT_FOUND					= -11000; // 物品找不到
+	PLAYER_ITEM_TABLE_ID_NOT_FOUND			= -11001; // 物品配置找不到
+	PLAYER_ITEM_NUM_NOT_ENOUGH				= -11002; // 物品数量不足
+	PLAYER_ITEM_TYPE_NOT_MATCH				= -11003; // 物品类型不匹配
+	PLAYER_EQUIP_SLOT_EMPTY					= -11004; // 装备位置为空
+	PLAYER_EQUIP_TYPE_INVALID				= -11005; // 装备类型错误
+	PLAYER_ITEM_FUSION_FAILED				= -11006; // 不能合成物品
+	PLAYER_ITEM_COUNT_NOT_ENOUGH_TO_FUSION  = -11007; // 合成碎片数量不足
+	PLAYER_ITEM_UPGRADE_TYPE_INVALID		= -11008; // 物品升级类型非法
+	PLAYER_ITEM_UPGRADE_RES_NOT_ENOUGH		= -11009; // 物品升级资源不足
+	PLAYER_ITEM_UPGRADE_SLOT_NO_ITEM		= -11010; // 物品升级槽中无物品
+	PLAYER_ITEM_UPGRADE_DATA_NOT_FOUND		= -11011; // 物品升级数据找不到
+	PLAYER_ITEM_UPGRADE_FAILED				= -11012; // 物品升级失败
+	PLAYER_ITEM_ONE_KEY_UPGRADE_NOT_ENOUGH_MATERIAL = -11013; // 装备一键合成材料不足
+	
+	// 角色
+	PLAYER_ROLE_NOT_FOUND					= -12000; // 角色不存在
+	PLAYER_ROLE_TABLE_ID_NOT_FOUND			= -12001; // 角色配置找不到
+	PLAYER_ROLE_LEVEL_DATA_NOT_FOUND		= -12002; // 角色升级数据不存在
+	PLAYER_ROLE_LEVEL_IS_MAX				= -12003; // 角色等级已经最大
+	PLAYER_ROLE_RANK_IS_MAX					= -12004; // 角色品阶已经最大
+	PLAYER_ROLE_RANKUP_DATA_NOT_FOUND		= -12005; // 角色品阶升级数据不存在
+	PLAYER_ROLE_IN_TEAM_CANT_DECOMPOSE		= -12006; // 角色在阵容中，不能分解
+	PLAYER_ROLE_FUSION_FAILED				= -12007; // 角色合成失败
+	PLAYER_FUSION_NEED_ROLE_NOT_FOUND  		= -12008; // 合成角色需要的角色不存在
+	PLAYER_FUSION_ROLE_INVALID				= -12009; // 合成需要的角色不合法
+	PLAYER_FUSION_ROLE_TABLE_DATA_NOT_FOUND = -12010; // 角色合成配置数据不存在
+	PLAYER_FUSION_MAIN_ROLE_NOT_FOUND		= -12011; // 角色合成主角色不存在
+	PLAYER_FUSION_ROLE_MATERIAL_NOT_ENOUGH  = -12012; // 角色合成材料数量不足
+	PLAYER_FUSION_MAIN_CARD_INVALID			= -12013; // 角色合成主卡类型非法
+	PLAYER_FUSION_NEED_RESOURCE_NOT_ENOUGH  = -12014; // 角色合成需要的资源不足
+	PLAYER_ROLE_IS_LOCKED					= -12015; // 角色被锁定
+	PLAYER_ROLE_INVENTORY_NOT_ENOUGH_SPACE	= -12016; // 角色背包没有足够的空位
+	PLAYER_ROLE_LEFT_SLOT_DROP_FAILED		= -12017; // 角色左槽掉落失败
+	PLAYER_ROLE_OPEN_LEFTSLOT_LEVEL_NOT_ENOUGH = -12018; // 角色左槽开启等级不够
+	PLAYER_ROLE_LEFT_SLOT_ALREADY_OPENED	= -12019; // 角色左槽已激活
+	PLAYER_ROLE_DISPLACE_TABLE_DATA_INVALID = -12020; // 角色置换配置数据非法
+	PLAYER_ROLE_DISPLACE_FAILED				= -12021; // 角色置换失败，未获得新的角色
+	PLAYER_ROLE_DISPLACE_CONFIRM_FAILED     = -12022; // 角色置换确认失败
+	PLAYER_ROLE_CANT_RANKUP_WITH_LEVEL		= -12023; // 角色未到升阶的等级
+	
+	// 关卡
+	PLAYER_STAGE_TABLE_DATA_NOT_FOUND		= -13000; // 关卡数据找不到
+	PLAYER_ALREADY_FIGHT_CAMPAIGN			= -13001; // 已打过该战役
+	PLAYER_CAMPAIGN_MUST_PlAY_NEXT			= -13002; // 只能打下一战役
+	PLAYER_NOT_FOUND_CAMPAIGN_TABLE_DATA	= -13003; // 没有战役数据
+	PLAYER_CANT_FIGHT_THE_CAMPAIGN			= -13004; // 不能打该战役
+	PLAYER_STAGE_TABLE_DATA_INVALID			= -13005; // 关卡数据错误
+	PLAYER_STAGE_ROLE_NUM_LIMITED			= -13006; // 关卡人数限制
+	PLAYER_DIAMOND_NOT_ENOUGH_FOR_ACCEL		= -13007; // 钻石不足，无法加速战斗
+	
+	// 邮件
+	PLAYER_MAIL_OVER_MAX_COUNT				= -14000; // 超出邮件最大数量
+	PLAYER_MAIL_NOT_FOUND					= -14001; // 邮件不存在
+	PLAYER_MAIL_NO_ATTACHED_ITEM			= -14002; // 邮件没有附加物品
+	PLAYER_MAIL_SEND_FAILED					= -14003; // 发送邮件失败
+	PLAYER_MAIL_RECEIVER_NOT_FOUND			= -14004; // 邮件接受者不存在
+	PLAYER_MAIL_PLAYER_IS_COOLDOWN			= -14005; // 个人邮件发送冷却中
+	PLAYER_MAIL_TITLE_TOO_LONG				= -14006; // 邮件标题太长
+	PLAYER_MAIL_CONTENT_TOO_LONG			= -14007; // 邮件内容太长
+	PLAYER_MAIL_SUBTYPE_UNKNOWN				= -14008; // 系统邮件子类型未知
+	
+	// 天赋
+	PLAYER_TALENT_NOT_FOUND					= -15000; // 没有该天赋
+	PLAYER_TALENT_LEVEL_IS_MAX				= -15001; // 天赋等级已满
+	PLAYER_TALENT_UP_NOT_ENOUGH_RESOURCE	= -15002; // 天赋升级没有足够资源
+	PLAYER_TALENT_UP_NEED_PREV_TALENT		= -15003; // 天赋升级需要前置天赋
+	
+	// 爬塔
+	PLAYER_TOWER_ALREADY_FIGHTED			= -16000; // 已经打过塔层
+	PLAYER_TOWER_NOT_FOUND					= -16001; // 不存在的塔层
+	PLAYER_TOWER_NOT_ENOUGH_STAMINA			= -16002; // 爬塔体力不够
+	PLAYER_TOWER_FIGHT_RECORD_NOT_FOUND		= -16003; // 爬塔录像不存在
+	PLAYER_TOWER_ALREADY_HIGHEST			= -16004; // 爬塔已达最高层
+	PLAYER_TOWER_CANT_FIGHT					= -16005; // 不能打该层塔
+	
+	// 点金手
+	PLAYER_GOLDHAND_DATA_NOT_FOUND			= -17000; // 点金手数据不存在
+	PLAYER_GOLDHAND_REFRESH_IS_COOLINGDOWN	= -17001; // 点金手刷新CD中
+	
+	// 商店
+	PLAYER_SHOP_TABLE_DATA_NOT_FOUND		= -18000; // 商店数据找不到
+	PLAYER_SHOP_ITEM_TABLE_DATA_NOT_FOUND	= -18001; // 商品数据找不到
+	PLAYER_SHOP_REFRESH_RESOURCE_NOT_ENOUGH = -18002; // 手动刷新资源不足
+	PLAYER_SHOP_ITEM_NOT_FOUND				= -18003; // 商店无该商品			
+	PLAYER_SHOP_ITEM_NUM_NOT_ENOUGH			= -18004; // 商店商品数量不足
+	PLAYER_SHOP_ITEM_BUY_RESOURCE_NOT_ENOUGH= -18005; // 商店购买商品资源不足
+	PLAYER_SHOP_ITEM_RANDOM_DATA_INVALID	= -18006; // 商品随机数据配置错误
+	PLAYER_SHOP_GUILD_NOT_JOIN				= -18007; // 公会商店需要先加入公会
+	
+	// 竞技场
+	PLAYER_ARENA_ONLY_FIGHT_MATCHED_PLAYER  = -19000; // 只能打匹配的玩家
+	PLAYER_ARENA_MATCH_PLAYER_FAILED		= -19001; // 匹配玩家失败
+	PLAYER_ARENA_IS_RESETING				= -19002; // 竞技场正在重置
+	PLAYER_ARENA_SEASON_IS_RESETING			= -19003; // 竞技场赛季正在重置
+	PLAYER_ARENA_TICKETS_NOT_ENOUGH			= -19004; // 竞技场门票不足
+	
+	// 排行榜
+	RANK_LIST_TYPE_INVALID					= -20000; // 排行榜类型错误
+	
+	// 活动副本
+	PLAYER_ACTIVE_STAGE_PURCHASE_NUM_OUT	= -20100; // 活动副本购买挑战次数用完
+	PLAYER_ACTIVE_STAGE_CHALLENGE_NUM_MAX	= -20101; // 活动副本挑战次数最大
+	PLAYER_ACTIVE_STAGE_LEVEL_NOT_ENOUGH	= -20102; // 活动副本玩家等级不够
+	
+	// 好友
+	PLAYER_FRIEND_ALREADY_ADD				= -21000; // 已加为好友
+	PLAYER_FRIEND_ALREADY_ASKED				= -21001; // 已经申请了好友
+	PLAYER_FRIEND_PLAYER_NO_IN_ASK_LIST		= -21002; // 玩家不再申请列表中
+	PLAYER_FRIEND_NOT_FOUND					= -21003; // 没有该好友
+	PLAYER_FRIEND_BOSS_DATA_NOT_FOUND		= -21004; // 好友BOSS配置数据找不到
+	PLAYER_FRIEND_BOSS_REFRESH_IS_COOLDOWN	= -21005; // 好友BOSS刷新还在冷却中
+	PLAYER_FRIEND_BOSS_IS_FIGHTING			= -21006; // 好友BOSS正被挑战
+	PLAYER_FRIEND_BOSS_IS_FINISHED			= -21007; // 好友BOSS已经结束
+	PLAYER_FRIEND_BOSS_NOT_FOUND			= -21008; // 好友BOSS不存在
+	PLAYER_FRIEND_NONE						= -21009; // 没有好友
+	PLAYER_FRIEND_BOSS_STAMINA_NOT_ENOUGH	= -21010; // 好友BOSS体力不足
+	PLAYER_FRIEND_BOSS_NO_NEED_TO_REFRESH	= -21011; // 好友BOSS无需刷新
+	PLAYER_FRIEND_NUM_MAX					= -21012; // 好友数量已达上限
+	PLAYER_FRIEND_SEARCH_BOSS_NUM_USEDOUT   = -21013; // 好友BOSS搜索次数用完
+	PLAYER_FRIEND_OTHER_SIDE_FRIEND_MAX		= -21014; // 对方好友数量已满
+	
+	// 任务
+	PLAYER_TASK_NOT_FOUND					= -22000; // 任务不存在
+	PLAYER_TASK_NOT_COMPLETE				= -22001; // 任务未完成
+	PLAYER_TASK_NOT_REWARD					= -22002; // 任务未领奖
+	PLAYER_TASK_ALREADY_REWARDED			= -22003; // 任务已领奖
+	PLAYER_TASK_PREV_NOT_COMPLETE			= -22004; // 前置任务未完成
+	
+	// 探索
+	PLAYER_EXPLORE_TABLE_DATA_NOT_FOUND		= -23000; // 探索任务配置数据找不到
+	PLAYER_EXPLORE_SEL_ROLES_CANT_SAME		= -23001; // 探索任务选择角色不能重复
+	PLAYER_EXPLORE_USER_DATA_NOT_FOUND		= -23002; // 探索任务玩家数据找不到
+	PLAYER_EXPLORE_ALREADY_STARTED			= -23003; // 探索任务已经开始
+	PLAYER_EXPLORE_SEL_ROLE_NOT_ENOUGH		= -23004; // 探索任务选择角色数量不足
+	PLAYER_EXPLORE_SEL_ROLE_STAR_NOT_ENOUGH = -23005; // 探索任务选择角色星级不足
+	PLAYER_EXPLORE_SEL_ROLE_CAMP_INVALID	= -23006; // 探索任务选择角色阵营非法
+	PLAYER_EXPLORE_SEL_ROLE_TYPE_INVALID	= -23007; // 探索任务选择角色类型非法
+	PLAYER_EXPLORE_CANT_UNLOCK_IF_STARTED	= -23008; // 探索任务已经开始不能解锁
+	PLAYER_EXPLORE_IS_INCOMPLETE			= -23009; // 探索任务未完成
+	PLAYER_EXPLORE_NO_FIGHT_BOSS_STATE		= -23010; // 探索任务的状态不能击打BOSS
+	PLAYER_EXPLORE_STATE_NOT_STARTED		= -23011; // 探索任务不是进行状态
+	
+	// 公会
+	PLAYER_GUILD_ALREADY_CREATED_OR_JOINED	= -24000; // 玩家已经创建或加入公会
+	PLAYER_GUILD_CREATED_DB_ERROR			= -24001; // 创建公会数据库错误
+	PLAYER_GUILD_NOT_ENOUGH_LEVEL_TO_OPEN	= -24002; // 没有足够的等级开启
+	PLAYER_GUILD_NOT_JOINED					= -24003; // 玩家还未加入公会
+	PLAYER_GUILD_DATA_NOT_FOUND				= -24004; // 玩家公会数据未找到
+	PLAYER_GUILD_NO_GUILDS_TO_RECOMMEND		= -24005; // 无公会可推荐
+	PLAYER_GUILD_CANT_GET_WITH_AUTHORITY	= -24006; // 公会操作权限不足
+	PLAYER_GUILD_STATE_IS_DELETED_OR_DELETING = -24007; // 公会处于已解散或正在解散状态
+	PLAYER_GUILD_STATE_IS_NOT_DELETING		= -24008; // 公会不处于正在解散状态
+	PLAYER_GUILD_JOIN_NEED_COOLDOWN			= -24009; // 加入公会需要等待离开上个公会的CD时间
+	PLAYER_GUILD_IS_ALREADY_MEMBER			= -24010; // 已经是公会成员
+	PLAYER_GUILD_MEMBER_NUM_LIMITED			= -24011; // 公会人数限制
+	PLAYER_GUILD_LEVELUP_TABLE_DATA_NOT_FOUND = -24012; // 公会升级配置数据找不到
+	PLAYER_GUILD_PRESIDENT_CANT_QUIT		= -24013; // 会长不能退出公会
+	PLAYER_GUILD_SIGN_IN_IS_COOLDOWN		= -24014; // 签名还在冷却中
+	PLAYER_GUILD_SET_OFFICER_ONLY_PRESIDENT = -24015; // 只有会长有权限任免官员
+	PLAYER_GUILD_CANT_CHANGE_PRESIDENT_SELF = -24016; // 不能对自己转让会长
+	PLAYER_GUILD_RECRUIT_IS_COOLDOWN		= -24017; // 公会招募正在冷却
+	PLAYER_GUILD_DONATE_TABLE_DAT_NOT_FOUND = -24018; // 公会捐赠配置数据找不到
+	PLAYER_GUILD_ALREADY_ASKED_DONATE		= -24019; // 公会已经请求过捐赠
+	PLAYER_GUILD_CANT_ASK_DONATE_TO_SELF	= -24020; // 不能对自己请求捐赠
+	PLAYER_GUILD_NOT_ASK_DONATE				= -24021; // 公会玩家未请求过捐赠
+	PLAYER_GUILD_NOT_ENOUGH_DONATE_SCORE    = -24022; // 公会捐赠没有足够积分
+	PLAYER_GUILD_NOT_ASK_JOIN				= -24023; // 玩家未申请加入公会
+	PLAYER_GUILD_NAME_TOO_LONG				= -24024; // 公会名太长
+	PLAYER_GUILD_NAME_IS_USED				= -24025; // 公会名已被使用
+	PLAYER_GUILD_LOGO_INVALID				= -24026; // 公会标志不存在
+	PLAYER_GUILD_CHANGE_NAME_FAILED			= -24027; // 公会改名失败
+	PLAYER_GUILD_CANT_DISMISS_OFFICER		= -24028; // 不能驱逐官员
+	
+	// 公会副本
+	PLAYER_GUILD_STAGE_TABLE_DATA_NOT_FOUND = -25000; // 公会副本数据找不到
+	PLAYER_GUILD_STAGE_STATE_IS_DEAD		= -25001; // 公会副本玩家已是死亡状态
+	PLAYER_GUILD_STAGE_EX_DATA_NOT_FOUND	= -25002; // 公会额外数据找不到
+	PLAYER_GUILD_STAGE_IS_FIGHTING			= -25003; // 公会副本有玩家正在挑战
+	PLAYER_GUILD_STAGE_CANT_FIGHTING		= -25004; // 公会副本不能挑战
+	PLAYER_GUILD_STAGE_CANT_RESPAWN_NO_DEAD = -25005; // 公会副本没死亡不能复活
+	PLAYER_GUILD_STAGE_RESPAWN_NUM_USED_OUT = -25006; // 公会副本复活次数已用满
+	PLAYER_GUILD_STAGE_RESET_IS_COOLDOWN	= -25007; // 公会副本重置冷却中
+	PLAYER_GUILD_STAGE_CANT_GET_DMG_RANKLIST= -25008; // 公会副本不能获得伤害排行榜
+	
+	// 聊天
+	CHAT_SEND_MSG_COOLING_DOWN   			= -26000; // 聊天发送消息还在冷却中
+	CHAT_SEND_MSG_BYTES_TOO_LONG 			= -26001; // 聊天消息超长
+	CHAT_CANT_SEND_WITH_NO_FREE				= -26002; // 聊天内部错误没有空闲的节点
+	CHAT_PULL_COOLING_DOWN       			= -26003; // 聊天拉取消息还在冷却中
+	CHAT_CHANNEL_CANT_GET					= -26004; // 无法获得聊天频道
+	
+	// 签到
+	SIGN_TABLE_DATA_NOT_FOUND				= -27000; // 签到配置数据不存在
+	SIGN_ALREADY_AWARD						= -27001; // 已领取过奖励
+	SIGN_MUST_AWARD_IN_SEQUENCE				= -27002; // 必须按签到顺序领奖
+	SIGN_ALL_AWARDED						= -27003; // 签到的奖励都已领完
+	
+	// 七天乐
+	SEVEN_DAYS_FINISHED						= -28000; // 活动已结束
+	SEVEN_DAYS_AWARDED						= -28001; // 已领奖
+	
+	
+	// 充值
+	CHARGE_TABLE_DATA_NOT_FOUND				= -29000; // 充值配置找不到
+	CHARGE_MONTH_CARD_ALREADY_PAYED			= -29001; // 月卡已买
+	CHARGE_FIRST_NO_DONE					= -29002; // 还未首充
+	CHARGE_FIRST_ALREADY_AWARD				= -29003; // 首充已领过奖
+	CHARGE_GOOGLE_SIGNATURE_INVALID			= -29010; // google签名验证失败
+	CHARGE_GOOGLE_PURCHASE_TOKEN_INVALID	= -29011; // google支付令牌验证失败
+	CHARGE_GOOGLE_ORDER_ALREADY_EXIST		= -29012; // google订单已存在
+	CHARGE_APPLE_PURCHASE_DATA_EMPTY		= -29013; // apple支付数据为空
+	CHARGE_APPLE_PURCHASE_DATA_INVALID		= -29014; // apple支付数据非法
+	CHARGE_APPLE_PAY_NEW_REQUEST_FAILED		= -29015; // apple支付验证请求创建失败
+	CHARGE_APPLE_PAY_REQUEST_FAILED			= -29016; // apple支付验证请求失败
+	CHARGE_APPLE_PAY_RESULT_UNMARSHAL_FAILED= -29017; // apple支付验证结果反序列化失败
+	CHARGE_APPLE_PAY_VERIFY_NO_PASS			= -29018; // apple支付验证未通过
+	CHARGE_APPLE_ORDER_ALREADY_EXIST        = -29019; // apple支付订单已存在
+	CHARGE_CHANNEL_INVALID					= -30000; // 充值渠道非法
+	CHARGE_PAY_REPEATED_VERIFY				= -30001; // 充值支付重复验证
+	CHARGE_NO_ACTIVITY_ON_THIS_TIME			= -30002; // 无充值活动可用
+	
+	// 远征
+	EXPEDITION_ROLE_NUM_TOO_MORE 			= -31000; // 远征上阵角色数太多
+	EXPEDITION_ROLE_WEAK_CANT_USE			= -31001; // 远征虚弱角色不能上场
+	EXPEDITION_ROLE_NO_HP_CANT_USE			= -31002; // 远征角色HP为0不能上场
+	
+	// 神器
+	ARTIFACT_TABLE_DATA_NOT_FOUND			= -32000; // 神器配置不存在
+	ARTIFACT_TABLE_UNLOCK_DATA_NOT_FOUND	= -32001; // 神器解锁配置不存在
+	ARTIFACT_ALREADY_UNLOCKED				= -32002; // 神器已经解锁
+	ARTIFACT_CANT_UNLOCK_WITH_CONDITION		= -32003; // 神器解锁条件不满足 
+	ARTIFACT_HAS_NOT_UNLOCK					= -32004; // 神器还未解锁
+	ARTIFACT_MUST_RANKUP_TO_LEVELUP			= -32005; // 神器升阶才能继续升级
+	ARTIFACT_LEVEL_IS_MAX					= -32006; // 神器等级达到上限
+	ARTIFACT_RANK_IS_MAX					= -32007; // 神器品阶达到上限
+	ARTIFACT_NO_NEED_TO_RESET				= -32008; // 神器无需重铸
+	
+	// 嘉年华
+	CARNIVAL_NOT_DOING						= -33000; // 嘉年华未开始
+	CARNIVAL_TASK_NOT_FOUND					= -33001; // 嘉年华任务不存在 
+	CARNIVAL_TASK_ALREADY_FINISHED			= -33002; // 嘉年华任务已完成
+	CARNIVAL_TASK_CANT_SET					= -33003; // 嘉年华任务不能完成进度
+	CARNIVAL_TASK_INVITE_CODE_INVALID		= -33004; // 嘉年华邀请码非法
+	CARNIVAL_TASK_INVITE_CODE_DEPRECATED	= -33005; // 嘉年华邀请码已作废
+	
+	// 远程调用
+	REMOTE_FUNC_CALL_ERROR					= -100000; // 远程调用失败
+	
+	// 保留
+	CHARGE_ORDER_DATA_EMPTY                 = -200000;
+	CHARGE_ORDER_DATA_INVALID				= -200001;
+	CHARGE_ORDER_SIGNATURE_INVALID			= -200002;
+	CHARGE_ORDER_SN_EMPTY					= -200003;
+	CHARGE_ORDER_SN_ALREDY_USED				= -200004;
+	CHARGE_ORDER_VERIFY_FAILED				= -200005;
+}
+
+// 心跳
+message C2SHeartbeat {
+}
+
+message S2CHeartbeat {
+	int32 SysTime							= 1; // 系统标准时间
+}
+
+// 请求数据同步
+message C2SDataSyncRequest {
+	bool Base								= 1;
+	bool Items 								= 2;
+	bool Roles								= 3;
+	bool Teams								= 4;
+	bool Campaigns							= 5;
+	bool Tower								= 6;
+	bool Arena								= 7;
+	bool Task								= 8;
+	bool ActiveStage						= 9;
+	bool Guild 								= 10;
+	bool Friend								= 11;
+	bool Chat                               = 12;
+	bool Explore							= 13;
+	bool Mail								= 14;
+	bool Sign  								= 15;
+	bool SevenDays                          = 16;
+	bool Talent								= 17;
+	bool GoldHand							= 18;
+	bool Guide                              = 19;
+}
+
+////////////////////////////////////end////////////////////////////////////////
+
+// 测试用消息
+message C2S_TEST_COMMAND {
+	string cmd 								= 1;
+	repeated string args 					= 2;
+}
+
+///////////////////////////////////////end////////////////////////////////////
+
+// 物品
+message ItemInfo {
+	int32 Id 								= 1; // 配置物品
+	int32 Value 							= 2; // 物品数目
+}
+
+// ----------------------------------- 账号 ----------------------------------
+
+// 注册
+message C2SRegisterRequest {
+	string Account							= 1; // 账号
+	string Password							= 2; // 密码
+	bool IsGuest							= 3; // 是否游客
+}
+
+message S2CRegisterResponse {
+	string Account							= 1; // 账号
+	string Password							= 2; // 密码
+	bool IsGuest							= 3; // 是否游客
+}
+
+// 游客绑定新账号
+message C2SGuestBindNewAccountRequest {
+	int32 ServerId							= 1; // 服务器ID
+	string Account							= 2; // 旧帐号
+	string Password							= 3; // 旧密码
+	string NewAccount						= 4; // 新账号
+	string NewPassword						= 5; // 新密码
+	string NewChannel						= 6; // 渠道
+}
+
+message S2CGuestBindNewAccountResponse {
+	int32 ServerId							= 1; // 服务器ID
+	string Account							= 2; // 旧帐号
+	string NewAccount						= 3; // 新账号
+	string NewPassword						= 4; // 新密码
+	string NewChannel						= 5; // 渠道
+}
+
+// 登陆
+message C2SLoginRequest {
+	string Acc 								= 1; // 账号
+	string Password							= 2; // 密码
+	string Channel 							= 3; // 渠道    目前三种情况，跟服务器设置是否验证账号有关  1. 空表示不需要渠道   2. "guest"表示游客登陆   3. "facebook" 表示facebook账号登陆
+	string ClientOS							= 4; // 客户端系统    ios android
+	string AAID				    			= 5; // AAID
+}
+// 服务器信息
+message ServerInfo {
+	int32 Id 								= 1;
+	string Name								= 2;
+	string IP								= 3;
+}
+
+// 玩家信息
+message AccountPlayerInfo {
+	int32 ServerId							= 1; // 服务器ID
+	string PlayerName						= 2; // 昵称
+	int32 PlayerLevel						= 3; // 等级
+	int32 PlayerHead						= 4; // 头像
+}
+
+// 登陆返回
+message S2CLoginResponse {
+	string Acc 								= 1; // 账号
+	string Token 							= 2; // 令牌
+	repeated ServerInfo Servers 			= 3; // 服务器列表, key是服务器ID
+	string Channel							= 4; // 渠道
+	repeated AccountPlayerInfo InfoList		= 5; // 账号玩家列表
+	int32 LastServerId						= 6; // 上次登陆的游戏服
+	string GameIP							= 7; // 游戏服地址
+	string BoundAccount						= 8; // 已绑定账号，游客模式下
+}
+
+/// 其它地方登录
+message S2COtherPlaceLogin {
+}
+
+// 选择服务器
+message C2SSelectServerRequest {
+	string Acc								= 1; // 账号
+	string Token							= 2; // 令牌
+	int32 ServerId							= 3; // 服务器ID
+}
+// 选择服务器返回
+message S2CSelectServerResponse {
+	string Acc								= 1; // 账号
+	string Token							= 2; // 进入游戏服务器的令牌
+	string IP								= 3; // 游戏服务器地址
+}
+
+// 请求玩家列表
+message C2SAccountPlayerListRequest {
+	
+}
+
+// 玩家数据列表(用于服务器列表显示)
+message S2CAccountPlayerListResponse {
+	repeated AccountPlayerInfo InfoList		= 1; // 列表
+}
+
+// 修改密码
+message C2SSetLoginPasswordRequest {
+	string Account							= 1;
+	string Password							= 2;
+	string NewPassword						= 3;
+}
+
+message S2CSetLoginPasswordResponse {
+	string Account							= 1;
+	string Password							= 2;
+	string NewPassword						= 3;
+}
+
+// 保存AAID
+message C2SSaveAAIDRequest {
+	string Account							= 1;
+	string AAID								= 2;
+}
+
+message S2CSaveAAIDResponse {
+	string Account							= 1;
+	string AAID								= 2;
+}
+///////////////////////////////////start///////////////////////////////////////
+
+message C2S_ONE_MSG {
+	int32 MsgCode 							= 1; // 消息ID
+	bytes Data 								= 2; // 消息数据
+}
+
+message C2S_MSG_DATA {
+	string Token 							= 1; // 令牌
+	repeated C2S_ONE_MSG MsgList			= 2; // 消息队列
+}
+
+message S2C_ONE_MSG {
+	int32 MsgCode							= 1; // 消息ID
+	int32 ErrorCode 						= 2; // 错误码
+	bytes Data 								= 3; // 数据
+}
+
+message S2C_MSG_DATA {
+	repeated S2C_ONE_MSG MsgList            = 1; // 返回的消息数据队列
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// 进入游戏服务器
+message C2SEnterGameRequest {
+	string Acc								= 1;
+}
+// 返回
+message S2CEnterGameResponse {
+	string Acc								= 1;
+	int32 PlayerId							= 2;
+}
+// 通知客户端进入游戏服务器完成
+message S2CEnterGameCompleteNotify {
+}
+
+// 离开游戏服务器
+message C2SLeaveGameRequest {
+}
+// 返回
+message S2CLeaveGameResponse {
+}
+
+// 玩家信息
+message S2CPlayerInfoResponse {
+	int32 Level 							= 1; // 等级
+	int32 Exp								= 2; // 经验
+	int32 Gold								= 3; // 金币
+	int32 Diamond							= 4; // 钻石
+	int32 Icon								= 5; // 头像
+	int32 VipLevel							= 6; // VIP等级
+	string Name								= 7; // 昵称
+	int32 SysTime							= 8; // 系统时间
+	int32 GuildId							= 9; // 公会ID
+	string GuildName						= 10; // 公会名
+	int32 GuildLogo							= 11; // 公会logo
+	int32 GuildLevel						= 12; // 公会等级
+}
+
+// 改名
+message C2SPlayerChangeNameRequest {
+	string NewName							= 1;
+}
+
+message S2CPlayerChangeNameResponse {
+	string NewName							= 1;
+}
+
+// 换头像
+message C2SPlayerChangeHeadRequest {
+	int32 NewHead							= 1;
+}
+
+message S2CPlayerChangeHeadResponse {
+	int32 NewHead							= 1;
+}
+
+// 重连
+message C2SReconnectRequest {
+}
+
+message S2CReconnectResponse {
+	string NewToken							= 1;
+}
+
+//----------------------------------- 战斗 -----------------------------------
+// 设置阵容
+message C2SSetTeamRequest {
+	int32 TeamType							= 1; // 1 pvp阵容  2 防守阵容  3 pve阵容
+	repeated int32 TeamMembers				= 2; // 阵容
+	int32 ArtifactId						= 3; // 神器
+}
+message S2CSetTeamResponse {
+	int32 TeamType							= 1;
+	repeated int32 TeamMembers				= 2;
+	int32 ArtifactId						= 3;
+}
+message TeamData {
+	int32 TeamType							= 1; // 阵容类型
+	repeated int32 TeamMembers				= 2; // 阵容
+	int32 ArtifactId						= 3; // 神器
+}
+// 阵容数据
+message S2CTeamsResponse {
+	repeated TeamData Teams  				= 1;
+}
+
+// 阵营成员
+message BattleMemberItem {
+	int32 Id								= 1; // 实例ID
+	int32 Pos								= 2; // 位置
+	int32 HP								= 3; // 血量
+	int32 MaxHP								= 4; // 最大血量
+	int32 Energy							= 5; // 能量
+	int32 TableId							= 6; // 配置ID
+	int32 Rank								= 7; // 品阶
+	int32 Level								= 8; // 等级
+	int32 Side								= 9; // 0 左  1 右
+}
+
+// 战斗成员
+message BattleFighter {
+	int32 Pos								= 1; // 位置  小于0表示神器
+	int32 HP								= 2; // 血量
+	int32 MaxHP								= 3; // 最大血量
+	int32 Damage 							= 4; // 伤害
+	int32 Energy							= 5; // 能量
+	int32 Side								= 6; // 0 左  1 右
+	bool IsCritical							= 7; // 是否暴击
+	bool IsBlock							= 8; // 是否格挡
+	bool IsAbsorb							= 9; // 是否吸收
+	int32 AntiType							= 10; // 克制类型  1 克制 0 无克制 -1 被克制
+	int32 Shield							= 11; // 护盾
+}
+
+message BattleMemberBuff {
+	int32 Side								= 1; // 0 左  1 右
+	int32 Pos								= 2; // 位置
+	int32 BuffId 							= 3; // buff id
+}
+
+// 战报项(一次攻击的结果)
+message BattleReportItem {
+	int32 Side								= 1; // 0 左边向右打  1 右边向左打
+	int32 SkillId							= 2; // 技能ID
+	BattleFighter User						= 3; // 技能使用者
+	repeated BattleFighter BeHiters 		= 4; // 技能受击者
+	repeated BattleMemberItem SummonNpcs	= 5; // 召唤出来的NPC
+	repeated BattleMemberBuff AddBuffs		= 6; // 增加的BUFF
+	repeated BattleMemberBuff RemoveBuffs   = 7; // 删除的BUFF
+	bool IsSummon							= 8; // 是否召唤
+	bool HasCombo							= 9; // 是否有连续技
+}
+
+// 一回合战报
+message BattleRoundReports {
+	int32 RoundNum							= 1; // 回合编号
+	repeated BattleReportItem Reports		= 2; // 回合战报列表
+	repeated BattleMemberBuff RemoveBuffs   = 3; // 回合结束的BUFF
+	repeated BattleFighter ChangedFighters	= 4; // 回合结束时BUFF影响的属性变化的成员
+	repeated int32 MyMembersEnergy			= 5; // 我方怒气
+	repeated int32 TargetMembersEnergy		= 6; // 敌方怒气
+	int32 MyArtifactStartEnergy				= 7; // 我方神器回合开始时能量
+	int32 TargetArtifactStartEnergy			= 8; // 敌方神器回合开始时能量
+	int32 MyArtifactEndEnergy				= 9; // 我方神器回合结束时能量
+	int32 TargetArtifactEndEnergy			= 10; // 敌方神器回合结束时能量
+}
+
+// 请求战斗结果
+message C2SBattleResultRequest {
+	repeated int32 AttackMembers 			= 1; // 阵型
+	int32 FightPlayerId						= 2; // 对方玩家ID
+	int32 CampaignId						= 3; // 战役ID
+	int32 BattleType						= 4; // 战斗类型   1 PVP     2 战役    3 爬塔    4 活动副本     5 好友BOSS   6 探索任务    7 探索剧情任务    8 好友切磋     9 公会副本       10 远征
+	int32 BattleParam						= 5; // 战斗参数     玩家ID    战役ID    塔层ID    活动副本ID     好友ID       探索任务ID    探索剧情任务ID    好友ID         公会副本ID        
+	int32 AssistFriendId					= 6; // 助战好友ID
+	int32 AssistRoleId					 	= 7; // 助战角色ID
+	int32 AssistPos							= 8; // 助战角色阵型位置
+	int32 SweepNum							= 9; // 扫荡次数   0 非扫荡  >0 扫荡次数  (pvp没有扫荡)
+	int32 AritfactId						= 10; // 神器ID
+}
+message S2CBattleResultResponse {
+	bool IsWin								= 1; // true 赢  false 输
+	repeated BattleMemberItem MyTeam		= 2; // 战斗前我方阵容
+	repeated BattleMemberItem TargetTeam	= 3; // 战斗前敌方阵容
+	repeated BattleReportItem EnterReports 	= 4; // 进场时战报，一般是被动技效果
+	repeated BattleRoundReports Rounds 		= 5; // 回合
+	repeated int32 MyMemberDamages			= 6; // 我方伤害统计
+	repeated int32 TargetMemberDamages		= 7; // 敌方伤害统计 
+	repeated int32 MyMemberCures			= 8; // 我方治疗统计
+	repeated int32 TargetMemberCures		= 9; // 敌方治疗统计
+	bool HasNextWave						= 10; // 关卡是否有下一波战斗
+	int32 NextCampaignId					= 11; // 下一个战役ID
+	int32 BattleType						= 12; // 战斗类型
+	int32 BattleParam						= 13; // 战斗参数
+	int32 AssistFriendId					= 14; // 助战好友ID
+	int32 AssistRoleId					 	= 15; // 助战角色ID
+	int32 AssistPos							= 16; // 助战角色阵型位置
+	int32 SweepNum							= 17; // 扫荡次数
+	int32 ExtraValue						= 18; // 额外的数据       类型 5 该值就是好友BOSS血量百分比   类型 9 公会副本时为BOSS血量百分比
+	int32 MySpeedBonus						= 19; // 自己先手值
+	int32 TargetSpeedBonus					= 20; // 对方先手值
+	int32 MyArtifactId						= 21; // 我方神器
+	int32 TargetArtifactId					= 22; // 敌方神器
+}
+
+// 请求录像列表
+message C2SBattleRecordListRequest {
+}
+message BattleRecordData {
+	int32 RecordId							= 1; // 录像ID
+	int32 AttackerId						= 2; // 攻击者ID
+	string AttackerName						= 3; // 攻击者昵称
+	int32 DefenserId						= 4; // 防守者ID
+	string DefenserName						= 5; // 防守者昵称
+	int32 RecordTime						= 6; // 录像时间
+	bool IsWin								= 7; // 是否赢
+	int32 AddScore							= 8; // 增加积分
+	int32 AttackerLevel						= 9;
+	int32 DefenserLevel						= 10;
+	int32 AttackerHead						= 11;
+	int32 DefenserHead						= 12;
+}
+message S2CBattleRecordListResponse {
+	repeated BattleRecordData Records		= 1; // 录像列表
+}
+
+// 请求录像
+message C2SBattleRecordRequest {
+	int32 Id								= 1; // 录像ID
+}
+message S2CBattleRecordResponse {
+	int32 Id								= 1; // 录像ID
+	int32 AttackerId						= 2; // 攻击者ID
+	string AttackerName						= 3; // 攻击者昵称
+	int32 DefenserId						= 4; // 防守者ID
+	string DefenserName						= 5; // 防守者昵称
+	bytes RecordData						= 6; // 录像数据
+	int32 RecordTime						= 7; // 录像时间
+}
+
+// 删除录像
+message C2SBattleRecordDeleteRequest {
+	int32 RecordId							= 1; // 录像ID
+}
+message S2CBattleRecordDeleteResponse {
+	int32 RecordId							= 1; // 录像Id
+}
+
+// 战斗随机奖励
+message S2CBattleRandomRewardNotify {
+	repeated ItemInfo Items					= 1; // 实际奖励物品  扫荡才有多个物品，非扫荡只有一个
+	repeated int32 FakeItems				= 2; // 假随机物品    扫荡不用
+}
+
+// ---------------------------------- 关卡 ------------------------------------
+// 请求战役关卡数据
+message C2SCampaignDataRequest {
+}
+
+message S2CCampaignDataResponse {
+	repeated int32 PassedCampaignIds		= 1; // 已打过的战役
+	int32 UnlockCampaignId					= 2; // 已战役关卡ID
+	int32 HangupCampaignId					= 3; // 挂机战役关卡
+	repeated ItemInfo StaticIncomes			= 4; // 当前挂机固定收益
+	int32 IncomeRemainSeconds				= 5; // 收益剩余秒数
+	int32 RemainAccelerateNum				= 6; // 剩余加速次数
+	int32 AccelerateCostDiamond				= 7; // 加速需要消耗钻石
+	int32 AccelerateRefreshRemainSeconds	= 8; // 加速刷新剩余时间
+}
+
+// 请求战役挂机收益
+message C2SCampaignHangupIncomeRequest {
+	int32 IncomeType						= 1; // 0 固定收益  1 随机收益
+}
+
+// 关卡战斗结果奖励
+message S2CCampaignHangupIncomeResponse {
+	int32 IncomeType						= 1; // 收益类型  0 挂机固定收益  1 挂机随机收益  2 战役奖励  3 爬塔奖励  4 活动副本奖励  5 挑战好友BOSS  6 探索任务  7 公会副本
+	repeated ItemInfo Rewards				= 2; // 奖励
+	int32 HangupIncomeRemainSeconds			= 3; // 挂机收益剩余秒数
+}
+
+// 设置挂机战役关卡
+message C2SBattleSetHangupCampaignRequest {
+	int32 CampaignId 						= 1; // 战役ID
+}
+
+// 设置挂机战役关卡返回
+message S2CBattleSetHangupCampaignResponse {
+	int32 CampaignId						= 1; // 战役ID
+}
+
+// 请求加速获取收益
+message C2SCampaignAccelerateIncomeRequest {
+}
+
+// 请求加速获取收益返回
+message S2CCampaignAccelerateIncomeResponse {
+	repeated ItemInfo Incomes 				= 1; // 收益
+	int32 RemainNum 						= 2; // 剩余次数
+	int32 NextCostDiamond				    = 3; // 下一次消耗钻石
+}
+
+// 手动刷新加速
+message C2SCampaignAccelerateRefreshRequest {
+}
+
+message S2CCampaignAccelerateRefreshResponse {
+	int32 RemainNum							= 1; // 剩余次数
+}
+
+// ----------------------------------- 物品 ------------------------------------
+// 请求同步物品数据
+message C2SItemsSyncRequest {
+}
+
+// 进入游戏同步物品数据
+message S2CItemsSync {
+	repeated ItemInfo Items  			 	= 1; // 同步的物品
+}
+
+// 物品数据更新
+message S2CItemsUpdate {
+	repeated ItemInfo ItemsAdd				= 1; // 增加的物品
+	repeated ItemInfo Items					= 2; // 物品的数量
+}
+
+// 物品合成
+message C2SItemFusionRequest {
+	int32 PieceId							= 1; // 碎片ID
+	int32 FusionNum							= 2; // 合成次数
+}
+
+message S2CItemFusionResponse {
+	repeated ItemInfo Items                 = 1; // 合成的物品或角色
+}
+
+// 出售物品
+message C2SItemSellRequest {
+	int32 ItemId                            = 1; // 出售物品ID
+	int32 ItemNum                           = 2; // 出售物品数量
+}
+
+message S2CItemSellResponse {
+	int32 ItemId                            = 1; // 出售物品ID
+	int32 ItemNum                           = 2; // 出售物品数量
+}
+
+// 装备物品
+message C2SItemEquipRequest {
+	int32 RoleId							= 1; // 角色ID
+	int32 ItemId							= 2; // 物品ID
+}
+
+message S2CItemEquipResponse {
+	int32 RoleId							= 1; // 角色ID
+	int32 EquipSlot							= 2; // 装备槽位
+	int32 ItemId							= 3; // 物品ID
+}
+
+// 卸载物品
+message C2SItemUnequipRequest {
+	int32 RoleId							= 1; // 角色ID
+	int32 EquipSlot							= 2; // 装备槽位
+}
+message S2CItemUnequipResponse {
+	int32 RoleId							= 1; // 角色ID
+	int32 EquipSlot							= 2; // 装备槽位
+}
+
+// 物品升级
+message C2SItemUpgradeRequest {
+	int32 RoleId							= 1; // 角色ID   只有左槽右槽需要
+	int32 ItemId							= 2; // 物品ID
+	int32 UpgradeType						= 3; // 升级类型   左槽有两种，对应ItemUpgrade.xml表中的UpgradeType
+	int32 ItemNum							= 4; // 数量
+}
+
+message S2CItemUpgradeResponse {
+	int32 RoleId							= 1; // 角色ID
+	repeated ItemInfo NewItems				= 2; // 新生成的物品
+}
+
+// 物品一键合成装备
+message C2SItemOneKeyUpgradeRequest {
+	repeated int32 ItemIds					= 1; // 待合成的物品列表
+}
+
+message S2CItemOneKeyUpgradeResponse {
+	repeated int32 ItemIds					= 1; // 待合成的物品列表
+	repeated ItemInfo CostItems				= 2; // 消耗的物品
+	repeated ItemInfo ResultItems 			= 3; // 生成的物品
+}
+
+// ----------------------------------- 角色 ------------------------------------
+// 请求角色
+message C2SRolesRequest {
+}
+message Role {
+	int32 Id								= 1;
+	int32 TableId							= 2;
+	int32 Rank								= 3;
+	int32 Level								= 4;
+	bool IsLock								= 5; // 锁定
+	repeated int32 Equips           		= 6; // 装备
+	int32 PlayerId							= 7; // 玩家ID
+	int32 State                             = 8; // 状态   0 空闲   1 阵型中   2 探索中
+}
+// 请求角色返回
+message S2CRolesResponse {
+	repeated Role Roles						= 1;
+}
+
+// 角色信息更新通知
+message S2CRolesChangeNotify {
+	repeated Role Adds 						= 1; // 增加
+	repeated int32 Removes          		= 2; // 删除
+	repeated Role Updates					= 3; // 更新
+}
+
+// 角色属性请求
+message C2SRoleAttrsRequest {
+	int32 RoleId							= 1; // 角色ID
+}
+
+// 角色属性返回
+message S2CRoleAttrsResponse {
+	int32 RoleId							= 1; // 角色Id
+	repeated int32 Attrs					= 2; // 角色属性
+	int32 Power								= 3; // 角色战力
+}
+
+// 角色升级
+message C2SRoleLevelUpRequest {
+	int32 RoleId							= 1; // 角色ID
+	int32 UpNum								= 2; // 升多少级
+}
+
+message S2CRoleLevelUpResponse {
+	int32 RoleId							= 1; // 角色ID
+	int32 UpNum								= 2; // 升多少级
+	int32 Level								= 3; // 新等级
+}
+
+// 角色升阶
+message C2SRoleRankUpRequest {
+	int32 RoleId							= 1; // 角色ID
+}
+
+message S2CRoleRankUpResponse {
+	int32 RoleId							= 1; // 角色ID
+	int32 Rank								= 2; // 品阶
+}
+
+// 角色分解
+message C2SRoleDecomposeRequest {
+	repeated int32 RoleIds					= 1; // 角色ID
+}
+
+message S2CRoleDecomposeResponse {
+	repeated int32 RoleIds					= 1; // 角色ID
+	repeated ItemInfo GetItems      		= 2; // 分解获得的物品
+}
+
+// 角色合成
+message C2SRoleFusionRequest {
+	int32 FusionId							= 1; // 合成ID
+	int32 MainCardId						= 2; // 主卡ID
+	repeated int32 Cost1CardIds				= 3; // 消耗的card1
+	repeated int32 Cost2CardIds				= 4; // 消耗的card2
+	repeated int32 Cost3CardIds				= 5; // 消耗的card3
+}
+
+message S2CRoleFusionResponse {
+	int32 NewCardId							= 1; // 生成的新卡，配置ID
+	int32 RoleId							= 2; // 新卡的角色ID
+	repeated ItemInfo GetItems				= 3; // 返还的资源
+	int32 FusionId							= 4; // 合成ID
+}
+
+// 请求锁定角色
+message C2SRoleLockRequest {
+	int32 RoleId							= 1; // 角色ID
+	bool IsLock								= 2; // 是否锁定
+}
+
+message S2CRoleLockResponse {
+	int32 RoleId							= 1; // 角色ID
+	bool IsLock								= 2; // 是否锁定
+}
+
+// 角色图鉴请求
+message C2SRoleHandbookRequest {
+}
+
+message S2CRoleHandbookResponse {
+	repeated int32 Roles					= 1; // 图鉴
+}
+
+// 左槽开启
+message C2SRoleLeftSlotOpenRequest {
+	int32 RoleId							= 1; // 角色ID
+}
+message S2CRoleLeftSlotOpenResponse {
+	int32 RoleId							= 1; // 角色ID
+}
+
+// 一键穿戴
+message C2SRoleOneKeyEquipRequest {
+	int32 RoleId							= 1; // 角色ID
+	repeated int32 Equips					= 2; // 待装备的物品
+}
+
+message S2CRoleOneKeyEquipResponse {
+	int32 RoleId							= 1;
+	repeated int32 Equips					= 2; // 穿戴后的装备
+}
+
+// 一键脱装
+message C2SRoleOnekeyUnequipRequest {
+	int32 RoleId							= 1;
+}
+
+message S2CRoleOneKeyUnequipResponse {
+	int32 RoleId							= 1;
+	repeated int32 Equips					= 2; // 脱装后的装备
+}
+
+// 左槽升级保存
+message C2SRoleLeftSlotResultSaveRequest {
+	int32 RoleId							= 1;
+}
+message S2CRoleLeftSlotResultSaveResponse {
+	int32 RoleId							= 1;
+}
+
+// 左槽升级取消
+message C2SRoleLeftSlotResultCancelRequest {
+	int32 RoleId							= 1;
+}
+message S2CRoleLeftSlotResultCancelResponse {
+	int32 RoleId							= 1;
+}
+
+// 角色置换
+message C2SRoleDisplaceRequest {
+	int32 GroupId							= 1; // 组ID
+	int32 RoleId							= 2; // 被置换的角色ID
+}
+
+message S2CRoleDisplaceResponse {
+	int32 GroupId							= 1; // 组ID
+	int32 RoleId							= 2; // 被置换的角色ID
+	int32 NewRoleTableId					= 3; // 新置换的角色配置ID
+}
+
+// 角色置换确认
+message C2SRoleDisplaceConfirmRequest {
+}
+
+message S2CRoleDisplaceConfirmResponse {
+}
+
+// --------------------------------- 邮件 -------------------------------------
+// 发送邮件
+message C2SMailSendRequest {
+	int32 ReceiverId						= 1; // 接收者ID
+	int32 MailType							= 2; // 邮件类型
+	int32 MailSubtype						= 3; // 子类型
+	string MailTitle						= 4; // 邮件标题
+	string MailContent						= 5; // 邮件内容
+	repeated ItemInfo AttachedItems			= 6; // 附加物品
+}
+message S2CMailSendResponse {
+	int32 MailId							= 1; // 邮件ID
+}
+
+// 获取邮件列表
+message C2SMailListRequest {
+}
+message MailBasicData {
+	int32 Id								= 1; // 邮件ID
+	int32 Type								= 2; // 邮件类型   1 系统  2 个人  3 公会群发
+	int32 Subtype							= 3; // 子类型
+	string Title							= 4; // 邮件标题
+	string SenderName						= 5; // 发送者
+	int32 SenderId							= 6; // 发送者ID
+	int32 SendTime							= 7; // 发送时间
+	bool IsRead								= 8; // 是否已读
+	bool IsGetAttached						= 9; // 是否已领取附件
+	bool HasAttached						= 10; // 是否有附件
+	int32 Value								= 11; // 额外数据
+}
+message S2CMailListResponse {
+	repeated MailBasicData Mails            = 1; //
+}
+
+// 请求邮件具体内容
+message C2SMailDetailRequest {
+	repeated int32 Ids                  	= 1; // 邮件ID
+}
+message MailDetail {
+	int32 Id								= 1; // 邮件ID
+	string Content							= 2; // 邮件内容
+	repeated ItemInfo AttachedItems			= 3; // 附加物品
+}
+message S2CMailDetailResponse {
+	repeated MailDetail Mails               = 1; // 邮件细节
+}
+
+// 获取邮件附加物品
+message C2SMailGetAttachedItemsRequest {
+	repeated int32 MailIds					= 1; // 邮件ID
+}
+message S2CMailGetAttachedItemsResponse {
+	repeated int32 MailIds					= 1; // 邮件ID
+	repeated ItemInfo AttachedItems			= 2; // 获得的附加物品   key: item_id  value: item_num
+}
+
+// 删除邮件
+message C2SMailDeleteRequest {
+	repeated int32 MailIds					= 1; // 邮件ID
+}
+message S2CMailDeleteResponse {
+	repeated int32 MailIds					= 1; // 邮件ID
+}
+
+// 新邮件通知
+message S2CMailsNewNotify {
+	repeated MailBasicData Mails            = 1; // 新邮件基本数据
+}
+
+// --------------------------------- 天赋 -------------------------------------
+// 天赋升级
+message C2STalentUpRequest {
+	int32 TalentId 							= 1; // 天赋基础ID
+}
+message S2CTalentUpResponse {
+	int32 TalentId							= 1; // 天赋基础ID
+	int32 Level								= 2; // 等级
+}
+
+// 请求天赋列表
+message C2STalentListRequest {
+}
+message TalentInfo {
+	int32 Id								= 1; // 天赋基础ID
+	int32 Level								= 2; // 等级
+}
+message S2CTalentListResponse {
+	repeated TalentInfo Talents				= 1; // 天赋列表
+}
+
+// 天赋重置
+message C2STalentResetRequest {
+	int32 Tag                               = 1; // 页签
+}
+
+message S2CTalentResetResponse {
+	int32 Tag 								= 1; // 页签
+	int32 CostDiamond						= 2; // 消耗的物品
+	repeated int32 ReturnItems				= 3; // 返还的物品
+}
+
+// --------------------------------- 爬塔 ------------------------------------
+// 请求爬塔数据
+message C2STowerDataRequest {
+}
+message S2CTowerDataResponse {
+	int32 CurrTowerId 						= 1; // 当前层
+	int32 TowerKeys							= 2; // 钥匙数
+	int32 RemainSeconds						= 3; // 剩余秒数
+}
+
+// 请求爬塔某层录像
+message C2STowerRecordsInfoRequest {
+	int32 TowerId                           = 1;
+}
+message TowerFightRecord {
+	int32 TowerFightId						= 1;
+	int32 AttackerId						= 2;
+	string AttackerName						= 3;
+	int32 CreateTime						= 4;
+	int32 AttackerHead						= 5;
+	int32 AttackerLevel						= 6;
+}
+message S2CTowerRecordsInfoResponse {
+	repeated TowerFightRecord Records		= 1;
+}
+
+// 请求爬塔的某个录像具体数据
+message C2STowerRecordDataRequest {
+	int32 TowerFightId					 	= 1;
+}
+message S2CTowerRecordDataResponse {
+	bytes RecordData						= 1; // 对应S2CBattleResultResponse的pb序列化数据
+}
+
+// 请求爬塔排行榜
+message C2STowerRankingListRequest {
+}
+message TowerRankInfo {
+	int32 PlayerId 							= 1;
+	string PlayerName						= 2;
+	int32 TowerId							= 3;
+	int32 PlayerLevel						= 4;
+	int32 PlayerHead						= 5;
+}
+message S2CTowerRankingListResponse {
+	repeated TowerRankInfo Ranks			= 1;
+}
+
+// ---------------------------------- 抽卡 ------------------------------------
+// 请求抽卡数据
+message C2SDrawDataRequest {
+}
+
+message S2CDrawDataResponse {
+	repeated ItemInfo FreeDrawRemainSeconds	= 1; // 免费抽卡剩余时间    Id 抽卡ID  Value 抽卡剩余时间
+}
+
+// 请求抽卡
+message C2SDrawCardRequest {
+	int32 DrawType							= 1; // 抽卡类型  
+}
+
+message S2CDrawCardResponse {
+	int32 DrawType							= 1; // 抽卡类型
+	repeated int32 RoleTableId				= 2; // 抽到的角色
+	bool IsFreeDraw							= 3; // 是否免费抽卡
+}
+
+// ---------------------------------- 点金手 ----------------------------------
+// 请求点金
+message C2STouchGoldRequest {
+	int32 Type								= 1; // 点金类型   1(免费), 2, 3
+}
+
+message S2CTouchGoldResponse {
+	int32 Type								= 1; // 点金类型
+	int32 GetGold							= 2; // 获得金币数
+	int32 CostDiamond						= 3; // 消耗钻石数
+	int32 NextRefreshRemainSeconds			= 4; // 下次剩余刷新时间
+}
+
+// 点金手数据
+message C2SGoldHandDataRequest {
+}
+
+message S2CGoldHandDataResponse {
+	int32 RemainRefreshSeconds				= 1; // 剩余刷新时间(秒)
+	repeated ItemInfo LeftNums				= 2; // 剩余次数     Id 点金类型   Value 剩余次数
+}
+
+// ---------------------------------- 商店 ------------------------------------
+// 请求商店
+message C2SShopDataRequest {
+	int32 ShopId							= 1; // 商店ID
+}
+
+message ShopItem {
+	int32 Id								= 1; // 商品ID  服务器自动生成
+	int32 ItemId							= 2; // 商品配置ID
+	ItemInfo CostResource					= 3; // 需要花费的货币
+	int32 BuyNum							= 4; // 已经购买次数
+}
+
+message S2CShopDataResponse {
+	int32 ShopId							= 1; // 商店ID
+	repeated ShopItem Items					= 2; // 商店商品
+	int32 NextFreeRefreshRemainSeconds		= 3; // -1 代表没有
+	int32 NextAutoRefreshRemainSeconds      = 4; // -1 代表没有
+}
+
+// 请求购买商品
+message C2SShopBuyItemRequest {
+	int32 ShopId							= 1; // 商店ID
+	int32 ItemId							= 2; // 商品ID
+	int32 BuyNum							= 3; // 商品数量
+}
+
+message S2CShopBuyItemResponse {
+	int32 ShopId							= 1; // 商店ID
+	int32 Id								= 2; // 商品ID  服务器自动生成
+	int32 BuyNum							= 3; // 购买次数
+}
+
+// 刷新商店
+message C2SShopRefreshRequest {
+	int32 ShopId							= 1; // 商店ID
+}
+
+message S2CShopRefreshResponse {
+	int32 ShopId							= 1; // 商店ID
+	bool IsFreeRefresh						= 2; // 是否免费 
+}
+
+// 商店自动刷新通知
+message S2CShopAutoRefreshNotify {
+	int32 ShopId							= 1; // 商店ID
+}
+
+// --------------------------------- 排行榜 -----------------------------------
+// 排行项
+message RankItemInfo {
+	int32 Rank 								= 1; // 排名
+	int32 PlayerId							= 2; // 玩家ID
+	string PlayerName						= 3; // 玩家昵称
+	int32 PlayerLevel						= 4; // 玩家等级
+	int32 PlayerHead						= 5; // 玩家头像
+	int32 PlayerArenaScore					= 6; // 玩家竞技场积分	   用于竞技场排行榜
+	int32 PlayerArenaGrade					= 7; // 玩家竞技场段位     用于竞技场排行榜
+	int32 PlayerPower						= 8; // 玩家战力           用于竞技场排行榜
+	int32 PlayerPassedCampaignId			= 9; // 玩家最新通关ID     用于战役排行榜
+	int32 PlayerRolesPower					= 10; // 玩家角色战力      用于角色战力排行榜
+}
+
+// 请求排行榜
+message C2SRankListRequest {
+	int32 RankListType						= 1; // 排行榜类型    1 竞技场  2 关卡  3 战力
+	repeated int32 Params					= 2; // 参数, 跟具体类型有关
+}
+
+message S2CRankListResponse {
+	int32 RankListType						= 1; // 排行榜类型
+	repeated RankItemInfo RankItems			= 2; // 排名项
+	int32 SelfHistoryTopRank				= 3; // 自己历史最高排名，暂时只有竞技场有
+	int32 SelfRank							= 4; // 自己排名
+	int32 SelfValue							= 5; // 数据值
+	int32 SelfValue2						= 6; // 数据值2
+}
+
+// 
+
+// --------------------------------- 竞技场 -----------------------------------
+// 竞技场数据请求
+message C2SArenaDataRequest {
+}
+
+message S2CArenaDataResponse {
+	int32 Score                     		= 1; // 积分
+	int32 Grade								= 2; // 段位
+	int32 Rank								= 3; // 排名
+	int32 TopRank						 	= 4; // 历史最高排名
+	int32 DayRemainSeconds					= 5; // 每天结算剩余结束时间
+	int32 SeasonRemainSeconds				= 6; // 赛季结算剩余时间
+	int32 TicketsRefreshRemainSeconds		= 7; // 门票剩余刷新时间
+}
+
+// 请求竞技场对方防守阵容
+message C2SArenaPlayerDefenseTeamRequest {
+	int32 PlayerId							= 1;
+}
+
+message PlayerTeamRole {
+	int32 TableId							= 1;
+	int32 Pos								= 2;
+	int32 Level								= 3;
+	int32 Rank								= 4;
+}
+
+message S2CArenaPlayerDefenseTeamResponse {
+	int32 PlayerId							= 1;
+	int32 PlayerLevel						= 2;
+	int32 PlayerHead						= 3;
+	repeated PlayerTeamRole DefenseTeam		= 4;
+	int32 Power								= 5;
+	int32 GuildId							= 6;
+	string GuildName						= 7;
+	string PlayerName						= 8;
+}
+
+// 请求竞技场匹配
+message C2SArenaMatchPlayerRequest {
+}
+
+message S2CArenaMatchPlayerResponse {
+	int32 PlayerId						 	= 1; // ID
+	string PlayerName						= 2; // 昵称
+	int32 PlayerLevel						= 3; // 等级
+	int32 PlayerHead						= 4; // 头像
+	int32 PlayerGrade 						= 5; // 段位
+	int32 PlayerScore                       = 6; // 积分
+	int32 PlayerPower						= 7; // 战力
+	int32 PlayerRank						= 8; // 名次
+}
+
+// 段位奖励
+message S2CArenaGradeRewardNotify {
+	int32 Grade								= 1; // 段位
+}
+
+message S2CArenaScoreNotify {
+	int32 SelfScore							= 1; // 自己分数
+	int32 AddScore							= 2; // 自己增加分数
+	int32 TargetScore						= 3; // 对方分数
+	int32 TargetAddScore					= 4; // 对方增加分数
+}
+
+// ---------------------------------- 活动副本 --------------------------------
+// 活动副本数据
+message C2SActiveStageDataRequest {
+	int32 StageType 						= 1; // 类型
+}
+
+message ActiveStageData {
+	int32 StageType							= 1; // 类型
+	int32 RemainChallengeNum				= 2; // 剩余挑战次数
+	int32 RemainBuyChallengeNum				= 3; // 剩余购买次数
+}
+
+message S2CActiveStageDataResponse{
+	repeated ActiveStageData StageDatas		= 1; // 返回活动副本数据
+	int32 RemainSeconds4Refresh				= 2; // 刷新剩余秒数
+	int32 GetPointsDay						= 3; // 获得好友点数
+	int32 MaxChallengeNum					= 4; // 最大挑战次数
+	int32 ChallengeNumPrice					= 5; // 挑战次数购买价格
+}
+
+// 活动副本挑战次数购买
+message C2SActiveStageBuyChallengeNumRequest {
+	int32 StageType							= 1; // 类型
+	int32 Num								= 2; // 购买次数
+}
+
+message S2CActiveStageBuyChallengeNumResponse {
+	int32 StageType							= 1; // 类型
+	int32 RemainBuyNum						= 2; // 剩余购买次数
+}
+
+// 活动副本刷新通知
+message S2CActiveStageRefreshNotify {
+}
+
+// 获取好友列表的助战角色
+message C2SActiveStageAssistRoleListRequest {
+}
+
+message S2CActiveStageAssistRoleListResponse {
+	repeated Role Roles						= 1; // 好友角色数据列表，好友ID在Role结构中
+}
+
+// ----------------------------------- 好友 -----------------------------------
+message PlayerInfo {
+	int32 Id								= 1; // ID
+	string Name								= 2; // 昵称
+	int32 Level								= 3; // 等级
+	int32 Head								= 4; // 头像
+}
+
+message FriendInfo {
+	int32 Id								= 1; // ID
+	string Name								= 2; // 名称
+	int32 Level								= 3; // 等级
+	int32 Head								= 4; // 头像
+	bool IsOnline							= 5; // 是否在线
+	int32 OfflineSeconds				 	= 6; // 离线时间(秒)
+	int32 RemainGivePointsSeconds			= 7; // 剩余赠送友情点秒数
+	int32 BossId							= 8; // BOSS
+	int32 BossHpPercent						= 9; // BOSS血量百分比
+	int32 Power								= 10; // 战力
+	int32 GetPoints                         = 11; // 收取的友情点  -1 已收取  0 还未赠送  >0 可收取的友情点
+}
+
+// 请求推荐好友
+message C2SFriendRecommendRequest {
+}
+
+message S2CFriendRecommendResponse {
+	repeated FriendInfo Players             = 1; // 推荐列表
+}
+
+// 请求好友列表
+message C2SFriendListRequest {
+}
+
+message S2CFriendListResponse {
+	repeated FriendInfo Friends				= 1; // 好友列表
+}
+
+// 申请好友
+message C2SFriendAskRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+message S2CFriendAskResponse {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+// 请求获得申请玩家列表
+message C2SFriendAskPlayerListRequest {
+}
+
+message S2CFriendAskPlayerListResponse {
+	repeated PlayerInfo Players				= 1; // 申请列表
+}
+
+// 申请玩家列表增加通知
+message S2CFriendAskPlayerListAddNotify {
+	repeated PlayerInfo PlayersAdd			= 1; // 列表
+}
+
+// 同意添加好友
+message C2SFriendAgreeRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+message S2CFriendAgreeResponse {
+	repeated FriendInfo Friends             = 1; // 好友列表
+}
+
+// 好友列表增加通知
+message S2CFriendListAddNotify {
+	repeated FriendInfo FriendsAdd			= 1; // 增加的好友列表
+}
+
+// 拒绝添加好友
+message C2SFriendRefuseRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+message S2CFriendRefuseResponse {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+// 删除好友
+message C2SFriendRemoveRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+message S2CFriendRemoveResponse {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+// 赠送友情点
+message C2SFriendGivePointsRequest {
+	repeated int32 FriendIds				= 1; // 玩家ID
+}
+
+message S2CFriendGivePointsResponse {
+	repeated int32 FriendIds				= 1; // 玩家ID
+	repeated bool IsGivePoints				= 2; // 是否赠送
+}
+
+// 领取友情点
+message C2SFriendGetPointsRequest {
+	repeated int32 FriendIds				= 1; // 玩家ID
+}
+
+message S2CFriendGetPointsResponse {
+	repeated int32 FriendIds				= 1; // 玩家ID
+	repeated int32 GetPoints				= 2; // 领取的友情点
+}
+
+// 好友BOSS搜索
+message C2SFriendSearchBossRequest {
+}
+
+message S2CFriendSearchBossResponse {
+	int32 FriendBossTableId					= 1; // 好友BOSS配置表ID
+	repeated ItemInfo Items				 	= 2; // 搜索不到关卡的掉落物品
+}
+
+// 获得好友BOSS列表
+message C2SFriendsBossListRequest {
+}
+
+message FriendBossInfo {
+	int32 FriendId							= 1; // 好友ID
+	int32 FriendBossTableId 				= 2; // 好友BOSS配置ID
+	int32 FriendBossHpPercent				= 3; // 好友BOSS血量百分比
+}
+
+message S2CFriendsBossListResponse {
+	repeated FriendBossInfo	BossList		= 1; // BOSS列表
+}
+
+// 获得好友BOSS助战列表
+message C2SFriendBossAttackListRequest {
+	int32 FriendId							= 1; // 好友ID
+}
+
+message S2CFriendBossAttackListResponse {
+	repeated PlayerInfo AttackList			= 1; // 攻击列表
+}
+
+// 好友一般数据(体力之类)
+message C2SFriendDataRequest {
+}
+
+message S2CFriendDataResponse {
+	int32 StaminaItemId 					= 1; // 体力物品ID
+	int32 AddStamina						= 2; // 增加的体力
+	int32 RemainSecondsNextStamina			= 3; // 下一点体力剩余秒数
+	int32 StaminaLimit						= 4; // 体力上限
+	int32 StaminaResumeOneCostTime			= 5; // 恢复一点体力需要时间(小时)
+	int32 BossId							= 6; // BOSS
+	int32 BossHpPercent						= 7; // 血量百分比
+	int32 AssistGetPoints					= 8; // 助战获取友情点
+	int32 SearchBossRemainSeconds			= 9; // 搜索BOSS剩余秒数
+	int32 AssistRoleId						= 10; // 助战角色
+	int32 TotalAssistGetPoints				= 11; // 总共获取助战友情点
+	int32 TotalFriendGiveGetPoints			= 12; // 总共好友赠送获取友情点
+}
+
+// 设置助战角色给好友
+message C2SFriendSetAssistRoleRequest {
+	int32 RoleId							= 1; // 角色ID
+}
+
+message S2CFriendSetAssistRoleResponse {
+	int32 RoleId							= 1; // 角色ID
+}
+
+// 一键收发友情点 (返回S2CFriendGivePointsResponse和S2CFriendGetPointsResponse两条消息)
+message C2SFriendGiveAndGetPointsRequest {
+	repeated int32 FriendIds				= 1; // 好友ID
+}
+
+// 获取助战友情点
+message C2SFriendGetAssistPointsRequest {
+}
+
+message S2CFriendGetAssistPointsResponse {
+	int32 GetPoints							= 1; // 获得友情点
+	int32 TotalGetPoints					= 2; // 已获得友情点
+	int32 CanGetPoints						= 3; // 还可获得友情点
+}
+
+// 好友删除通知
+message S2CFriendRemoveNotify {
+	int32 FriendId							= 1; // 好友ID
+}
+
+// ------------------------------------ 任务 ----------------------------------
+
+// 任务数据
+message TaskData {
+	int32 Id 								= 1; // 任务Id
+	int32 Value 							= 2; // 任务值
+	int32 State 							= 3; // 任务状态   0 未完成 1 完成 2 已领奖
+}
+
+// 客户端向服务器请求日常任务数据
+message C2STaskDataRequest {
+	int32 TaskType							= 1; // 任务类型   0 全部   1 日常  2 成就
+}
+
+// 服务器向客户端发送任务数据
+message S2CTaskDataResponse {
+	int32 TaskType							= 1; // 任务类型
+	repeated TaskData TaskList 				= 2; // 任务数据列表
+	int32 DailyTaskRefreshRemainSeconds		= 3; // 每日任务剩余刷新时间
+}
+
+// 服务器向客户端通知任务值变化
+message S2CTaskValueNotify {
+	TaskData Data							= 1; // 任务状态变化或者有新任务
+}
+
+// 客户端向服务器请求任务奖励
+message C2STaskRewardRequest {
+	int32 TaskId 							= 1; // 任务ID
+}
+
+// 服务器向客户端发送任务结果
+message S2CTaskRewardResponse {
+	int32 TaskId 							= 1; // 任务Id
+}
+
+// ------------------------------------ 探索 ----------------------------------
+// 探索数据
+message ExploreData {
+	int32 Id								= 1; // 服务器生成的ID
+	int32 TaskId							= 2; // 配置表中的ID
+	repeated int32 RoleCampsCanSel			= 3; // 可选择的角色阵营，未开始时
+	repeated int32 RoleTypesCanSel			= 4; // 可选择的角色类型，未开始时
+	int32 State								= 5; // 0 未开始  1 进行中  2 完成  3 可挑战BOSS 
+	int32 RoleId4Title						= 6; // 任务标题的角色ID
+	int32 NameId4Title						= 7; // 任务标题的语言表ID
+	repeated int32 RoleIds					= 8; // 已选择角色
+	int32 RemainSeconds						= 9; // 任务剩余秒数
+	repeated int32 RandomRewards			= 10; // 随机奖励  格式(id,num,id,num...)
+	bool IsLock								= 11; // 是否锁定
+	int32 RewardStageId						= 12; // 奖励关卡ID
+}
+
+// 请求探索数据
+message C2SExploreDataRequest {
+}
+
+message S2CExploreDataResponse {
+	repeated ExploreData Datas				= 1; // 任务列表
+	repeated ExploreData StoryDatas			= 2; // 剧情任务列表
+	int32 RefreshRemainSeconds				= 3; // 任务剩余刷新时间
+}
+
+// 选择探索角色
+message C2SExploreSelRoleRequest {
+	int32 Id								= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情任务
+	repeated int32 RoleIds					= 3; // 角色列表
+}
+
+message S2CExploreSelRoleResponse {
+	int32 Id								= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情任务
+	repeated int32 RoleIds					= 3; // 角色列表
+}
+
+// 开始探索
+message C2SExploreStartRequest {
+	repeated int32 Ids						= 1; // 任务ID列表
+	bool IsStory							= 2; // 是否剧情任务
+}
+
+message S2CExploreStartResponse {
+	repeated int32 Ids						= 1; // ID列表
+	bool IsStory							= 2; // 是否剧情
+	bool IsLock								= 3; // 是否锁定
+}
+
+// 加速
+message C2SExploreSpeedupRequest {
+	repeated int32 Ids						= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情任务
+}
+
+message S2CExploreSpeedupResponse {
+	repeated int32 Ids						= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情任务
+	int32 CostDiamond						= 3; // 花费钻石
+}
+
+// 刷新探索任务
+message C2SExploreRefreshRequest {
+}
+
+message S2CExploreRefreshResponse {
+	repeated ExploreData Datas				= 1; // 数据列表
+}
+
+// 自动刷新通知
+message S2CExploreAutoRefreshNotify {
+}
+
+// 锁定或解锁探索任务
+message C2SExploreLockRequest {
+	repeated int32 Ids						= 1; // ID列表
+	bool IsLock								= 2; // 是否锁定
+}
+
+message S2CExploreLockResponse {
+	repeated int32 Ids						= 1; // ID列表
+	bool IsLock								= 2; // 是否锁定
+}
+
+// 探索奖励
+message C2SExploreGetRewardRequest {
+	int32 Id 								= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情任务
+}
+
+message S2CExploreGetRewardResponse {
+	int32 Id								= 1; // ID
+	bool IsStory							= 2; // 是否剧情任务
+	repeated ItemInfo RandomItems			= 3; // 随机奖励
+	int32 RewardStageId						= 4; // 奖励关卡
+}
+
+// 剧情探索任务通知
+message S2CExploreStoryNewNotify {
+	int32 TaskId							= 1; // 探索任务配置ID
+}
+
+// 探索任务被删除
+message S2CExploreRemoveNotify {
+	int32 Id								= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情任务
+}
+
+// 取消探索任务
+message C2SExploreCancelRequest {
+	int32 Id								= 1; // 任务ID
+	bool IsStory							= 2; // 是否剧情
+}
+
+message S2CExploreCancelResponse {
+	int32 Id								= 1;
+	bool IsStory							= 2;
+}
+
+// ----------------------------------- 聊天 -----------------------------------
+// 发送世界聊天消息
+message C2SChatRequest {
+	int32 Channel							= 1; // 频道  1 世界  2 公会  3 招募  4 系统公告
+	bytes Content							= 2; // 内容
+}
+message S2CChatResponse {
+	int32 Channel							= 1; // 频道  1 世界  2 公会  3 招募  4 系统公告
+	bytes Content							= 2; // 内容
+}
+
+// 拉取聊天消息
+message C2SChatMsgPullRequest {
+	int32 Channel							= 1; // 频道
+}
+message ChatItem {
+	bytes Content 							= 1; // 内容
+	int32 PlayerId							= 2; // 玩家ID
+	string PlayerName						= 3; // 玩家名称
+	int32 PlayerHead						= 4; // 玩家头像
+	int32 PlayerLevel						= 5; // 玩家等级
+	int32 IsFriend							= 6; // 是否好友
+	int32 SendTime							= 7; // 发送时间
+	int32 ExtraValue						= 8; // 额外数据   招聘频道时为公会ID
+}
+message S2CChatMsgPullResponse {
+	int32 Channel							= 1; // 频道
+	repeated ChatItem Items					= 2; // 拉取的聊天队列
+}
+
+// ----------------------------------- 公会 -----------------------------------
+// 公会数据
+message C2SGuildDataRequest {
+}
+
+message GuildInfo {
+	int32 Id								= 1; // ID
+	string Name								= 2; // 名称
+	int32 Level								= 3; // 等级
+	int32 Exp								= 4; // 经验
+	int32 Logo								= 5; // 标志
+	string Anouncement						= 6; // 公告
+	int32 DismissRemainSeconds				= 7; // 解散剩余秒数
+	int32 SignRemainSeconds					= 8; // 签到剩余秒数
+	int32 AskDonateRemainSeconds			= 9; // 请求捐赠剩余秒数
+	int32 DonateResetRemainSeconds			= 10; // 捐赠重置剩余秒数
+	int32 DonateNum							= 11; // 已捐赠数
+	int32 MaxDonateNum						= 12; // 最大捐赠数
+	int32 President							= 13; // 会长
+	string PresidentName					= 14; // 会长名
+	int32 MemberNum							= 15; // 成员数
+	int32 MemberNumLimit					= 16; // 最大成员数
+	int32 Position							= 17; // 职位
+}
+
+message S2CGuildDataResponse {
+	GuildInfo Info							= 1; // 信息
+}
+
+// 搜索公会
+message C2SGuildSearchRequest {
+	string Key								= 1; // 关键字
+}
+
+message GuildBaseInfo {
+	int32 Id								= 1; // ID
+	string Name					 			= 2; // 名称
+	int32 Level								= 3; // 等级
+	int32 Logo								= 4; // 经验
+	int32 MemberNum							= 5; // 成员数
+	int32 MemberNumLimit					= 6; // 成员上限
+}
+
+message S2CGuildSearchResponse {
+	repeated GuildBaseInfo InfoList			= 1; // 搜索到的公会
+}
+
+// 推荐公会
+message C2SGuildRecommendRequest {
+}
+
+message S2CGuildRecommendResponse {
+	repeated GuildBaseInfo InfoList			= 1; // 推荐的公会
+}
+
+// 创建公会
+message C2SGuildCreateRequest {
+	string GuildName						= 1; // 名称
+	int32 GuildLogo							= 2; // 标志
+	bytes Anouncement						= 3; // 公告
+}
+
+message S2CGuildCreateResponse {
+	GuildInfo Info	 						= 1; // 信息
+	int32 CostDiamond						= 2; // 消耗钻石
+}
+
+// 解散公会
+message C2SGuildDismissRequest {
+}
+
+message S2CGuildDismissResponse {
+	int32 RealDismissRemainSeconds			= 1; // 真正解散剩余时间
+}
+
+// 取消解散公会
+message C2SGuildCancelDismissRequest {
+}
+
+message S2CGuildCancelDismissResponse {
+}
+
+// 公会删除通知
+message S2CGuildDeleteNotify {
+	int32 GuildId							= 1; // ID
+}
+
+// 公会信息修改
+message C2SGuildInfoModifyRequest {
+	string NewGuildName						= 1; // 新名称
+	int32 NewGuildLogo						= 2; // 新Logo
+}
+
+message S2CGuildInfoModifyResponse {
+	string NewGuildName						= 1; // 新名称
+	int32 NewGuildLogo						= 2; // 新Logo
+	int32 CostDiamond						= 3; // 消耗钻石
+}
+
+// 公会修改公告
+message C2SGuildAnouncementRequest {
+	string Content							= 1; // 新内容
+}
+
+message S2CGuildAnouncementResponse {
+	string Content							= 1; // 新内容
+}
+
+// 公会成员列表
+message C2SGuildMembersRequest {
+}
+
+message GuildMember {
+	int32 Id								= 1; // 玩家ID
+	string Name								= 2; // 名称
+	int32 Level								= 3; // 等级
+	int32 Head								= 4; // 头像
+	int32 Position							= 5; // 职位类型  1 会长   2 官员   0 会员
+	int32 LastOnlineTime					= 6; // 最近在线时间距离当前时间  0 表示在线
+	int32 NextSignRemainSeconds				= 7; // 下次签到剩余时间
+	int32 JoinTime							= 8; // 加入时间
+}
+
+message S2CGuildMemebersResponse {
+	repeated GuildMember Members			= 1; // 成员列表
+}
+
+// 公会申请列表
+message C2SGuildAskListRequest {
+}
+
+message S2CGuildAskListResponse {
+	repeated PlayerInfo AskList				= 1; // 申请列表
+}
+
+// 申请加入公会
+message C2SGuildAskJoinRequest {
+	int32 GuildId							= 1; // 公会ID
+}
+
+message S2CGuildAskJoinResponse {
+	int32 GuildId							= 1; // 公会Id
+}
+
+// 同意加入公会
+message C2SGuildAgreeJoinRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+	bool IsRefuse							= 2; // 是否拒绝
+}
+
+message S2CGuildAgreeJoinResponse {
+	repeated ItemInfo  Player2Res			= 1; // Id: 玩家ID      Value: 结果( >0 成功   <0 错误码)
+	bool IsRefuse							= 2; // 是否拒绝
+}
+
+// 公会同意加入通知
+message S2CGuildAgreeJoinNotify {
+	int32 NewMemberId						= 1; // 新会员
+	int32 GuildId							= 2; // 公会ID
+}
+
+// 主动退出公会
+message C2SGuildQuitRequest {
+}
+
+message S2CGuildQuitResponse {
+	int32 RejoinRemainSeconds				= 1; // 再次加入公会的剩余时间
+}
+
+// 公会日志
+message C2SGuildLogsRequest {
+}
+
+message GuildLog {
+	int32 Id								= 1; // ID
+	int32 Time								= 2; // 记录时间
+	int32 Type 								= 3; // 类型   1 创建联盟  2 成员加入  3 成员脱离   4 成员被踢   5 成员被任命   6 成员被罢免   7 会长转让
+	int32 PlayerId							= 4; // 玩家ID
+	string PlayerName						= 5; // 玩家名称
+}
+
+message S2CGuildLogsResponse {
+	repeated GuildLog Logs					= 1; // 日志列表
+}
+
+// 公会签到
+message C2SGuildSignInRequest {
+}
+
+message S2CGuildSignInResponse {
+	int32 NextSignInRemainSeconds			= 1; // 下次签到剩余秒数
+	repeated int32 RewardItems				= 2; // 奖励  (id,num,id,num...)
+	int32 GuildLevel						= 3; // 公会等级
+	int32 GuildExp							= 4; // 公会经验
+	bool IsLevelup							= 5; // 是否升级
+	int32 MemberNumLimit					= 6; // 公会最大人数
+}
+
+// 公会任命或罢免官员
+message C2SGuildSetOfficerRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+	int32 SetType							= 2; // 1 任命  2 罢免
+}
+
+message S2CGuildSetOfficerResponse {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+	int32 SetType							= 2; // 1 任命  2 罢免
+	int32 Position							= 3; // 职位
+}
+
+// 公会任命罢免通知
+message S2CGuildSetOfficerNotify {
+	int32 MemberId							= 1; // 会员
+	int32 SetType							= 2; // 1 任命  2 罢免
+	int32 NewPosition						= 3; // 新职位
+}
+
+// 公会驱逐会员
+message C2SGuildKickMemberRequest {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+}
+
+message S2CGuildKickMemberResponse {
+	repeated int32 PlayerIds				= 1; // 玩家ID
+	repeated int32 Player2Res				= 2; // 对应玩家的错误码
+}
+
+// 公会驱逐会员通知
+message S2CGuildKickMemberNotify {
+	int32 MemberId							= 1; // 被驱逐会员
+}
+
+// 公会转让会长
+message C2SGuildChangePresidentRequest {
+	int32 NewPresidentId					= 1; // 新会长ID
+}
+
+message S2CGuildChangePresidentResponse {
+	int32 NewPresidentId					= 1; // 新会长ID
+}
+
+// 公会转让会长通知
+message S2CGuildChangePresidentNotify {
+	int32 OldPresidentId					= 1; // 原会长
+	int32 NewPresidentId					= 2; // 新会长
+}
+
+// 公会招募
+message C2SGuildRecruitRequest {
+	bytes Content							= 1; // 内容
+}
+
+message S2CGuildRecruitResponse {
+	bytes Content							= 1; // 内容
+}
+
+// 公会请求捐赠
+message C2SGuildAskDonateRequest {
+	int32 ItemId							= 1; // 碎片ID
+	int32 ItemNum 							= 2; // 碎片数
+}
+
+message S2CGuildAskDonateResponse {
+	int32 ItemId							= 1;
+	int32 ItemNum 							= 2;
+	int32 NextAskRemainSeconds				= 3; // 下次剩余时间
+}
+
+// 公会捐赠
+message C2SGuildDonateRequest {
+	int32 PlayerId							= 1; // 被捐赠玩家
+	int32 ItemId							= 2; // 碎片ID
+	int32 ItemNum 							= 3; // 碎片数
+}
+
+message S2CGuildDonateResponse {
+	int32 PlayerId							= 1; // 被捐赠玩家
+	int32 ItemId							= 2; // 碎片
+	int32 ItemNum 							= 3; // 碎片数
+	int32 DonateNum							= 4; // 已捐赠数
+	bool  DonateOver						= 5; // 是否捐赠完毕
+}
+
+// 公会通知请求捐赠成员物品更新
+message S2CGuildDonateItemNotify {
+	int32 ItemId							= 1; // 物品ID
+	int32 ItemNum							= 2; // 物品总数
+	bool  DonateOver						= 3; // 是否捐赠完毕
+}
+
+// 公会捐赠列表
+message C2SGuildDonateListRequest {
+}
+
+// 请求捐赠玩家信息
+message GuildAskDonateInfo {
+	int32 PlayerId							= 1; // ID
+	string PlayerName						= 2; // 名称
+	int32 PlayerHead						= 3; // 头像
+	int32 PlayerLevel						= 4; // 等级
+	int32 ItemId							= 5; // 捐赠物品ID
+	int32 ItemNum							= 6; // 已接受捐赠数
+	int32 AskTime							= 7; // 请求时间 可以用于排序
+	int32 RemainExistSeconds				= 8; // 剩余存在时间
+}
+
+message S2CGuildDonateListResponse {
+	repeated GuildAskDonateInfo InfoList	= 1; // 请求捐赠列表
+}
+
+// 公会聊天协议与世界聊天通用
+
+// 公会副本数据
+message C2SGuildStageDataRequest {
+}
+
+message S2CGuildStageDataResponse {
+	int32 CurrBossId						= 1; // 当前公会副本
+	int32 HpPercent							= 2; // 副本BOSS血量百分比
+	int32 RespawnNum						= 3; // 已复活次数
+	int32 TotalRespawnNum					= 4; // 总复活次数
+	int32 RefreshRemainSeconds				= 5; // 刷新剩余时间
+	int32 StageState						= 6; // 挑战状态            0 可挑战  1 等待复活
+	repeated int32 RespawnNeedCost			= 7; // 复活需要钻石数
+	int32 CanResetRemainSeconds				= 8; // 可重置剩余时间
+}
+
+// 公会副本排行榜
+message C2SGuildStageRankListRequest {
+	int32 BossId							= 1; // 公会副本ID
+}
+
+// 公会副本伤害列表项
+message GuildStageDamageItem {
+	int32 Rank								= 1; // 排名
+	int32 MemberId							= 2; // 成员ID
+	string MemberName						= 3; // 成员名称
+	int32 Level								= 4; // 等级
+	int32 Head								= 5; // 头像
+	int32 Damage							= 6; // 伤害
+}
+
+message S2CGuildStageRankListResponse {
+	int32 BossId							= 1; // 公会副本ID
+	repeated GuildStageDamageItem DmgList	= 2; // 伤害列表
+}
+
+// 公会副本玩家复活
+message C2SGuildStagePlayerRespawnRequest {
+}
+
+message S2CGuildStagePlayerRespawnResponse{
+	int32 RemainRespawnNum 					= 1; // 剩余复活次数
+	int32 CostDiamond						= 2; // 花费钻石
+	int32 NextCost						 	= 3; // 下一次花费
+}
+
+// 公会副本重置
+message C2SGuildStageResetRequest {
+}
+
+message S2CGuildStageResetResponse {
+	int32 NextResetRemainSeconds			= 1; // 下一次重置剩余秒数
+}
+
+// 公会副本重置通知
+message S2CGuildStageResetNotify {
+	int32 NextResetRemainSeconds			= 1; // 下一次重置剩余秒数
+}
+
+// 公会副本数据自动刷新
+message S2CGuildStageAutoRefreshNotify {
+	int32 NextRefreshRemainSeconds			= 1; // 下一次自动刷新剩余秒数
+}
+
+// ---------------------------------- 签到 ------------------------------------
+// 签到数据
+message C2SSignDataRequest {
+}
+
+message S2CSignDataResponse {
+	int32 Group                        		= 1; // 签到周期索引
+	int32 TakeAwardIndex					= 2; // 已领奖的索引
+	int32 SignedIndex					 	= 3; // 已签到的索引
+	int32 NextSignRemainSeconds				= 4; // 下次领奖剩余秒数
+}
+
+// 领奖
+message C2SSignAwardRequest {
+	int32 Index								= 1; // 领奖的索引  0 表示领取所有
+}
+
+message S2CSignAwardResponse {
+	int32 Index								= 1; // 领奖的索引
+	repeated ItemInfo Rewards               = 2; // 领到的奖
+}
+
+// ---------------------------------- 七天乐 ----------------------------------
+// 七天乐数据
+message C2SSevenDaysDataRequest {
+}
+
+message S2CSevenDaysDataResponse {
+	repeated int32 AwardStates				= 1; // 领奖状态序列，最大长度为7，0表示未领奖，1表示已领奖
+	int32 StartTime							= 2; // 开始时间
+	int32 RemainSeconds						= 3; // 剩余时间
+}
+
+// 领奖
+message C2SSevenDaysAwardRequest {
+}
+
+message S2CSevenDaysAwardResponse {
+	int32 Days								= 1; // 对应天数
+	repeated ItemInfo Rewards				= 2; // 获得的奖励
+}
+
+// ---------------------------------- 充值 ------------------------------------
+// 充值数据
+message C2SChargeDataRequest {
+}
+
+message MonthCardData {
+	string BundleId							= 1; // BundleId
+	int32 EndTime							= 2; // 结束时间
+	int32 SendMailNum						= 3; // 已发送奖励邮件数
+}
+
+message S2CChargeDataResponse {
+	int32 FirstChargeState					= 1; // 首充状态 0 未充  1 已充可领取  2 已领取
+	repeated MonthCardData Datas			= 2; // 月卡数据
+	repeated string ChargedBundleIds		= 3; // 已充过值的BundleId
+}
+
+// 充值请求 
+message C2SChargeRequest {
+	int32 Channel							= 1; // 渠道  1 google   2 appele
+	string BundleId							= 2; // BundleId
+	bytes PurchareData						= 3; // 需要验证的支付数据
+	bytes ExtraData							= 4; // 额外数据
+	int32 ClientIndex						= 5; // 客户端索引，用于标记充值记录
+}
+
+message S2CChargeResponse {
+	int32 Channel							= 1; // 渠道  1 google   2 appele
+	string BundleId							= 2; // BundleId
+	bool IsFirst							= 3; // 是否首次
+	int32 ClientIndex						= 4; // 客户端索引，用于标记充值记录
+}
+
+// 首充奖励通知, 第一次充值会通知
+message S2CChargeFirstRewardNotify {
+}
+
+// 首充领奖
+message C2SChargeFirstAwardRequest {
+}
+
+message S2CChargeFirstAwardResponse {
+	repeated ItemInfo Rewards				= 1; // 奖励物品
+}
+
+// --------------------------------- 红点提示 ---------------------------------
+// 红点功能枚举
+enum RED_POINT {
+	STATE_NONE								= 0;
+	TASK									= 1; // 成就任务(有奖励)            按位与运算大于0 :  0x01 成就任务          0x02 每日任务
+	WELFARE									= 2; // 福利(有奖励)				按位与运算大于0 :  0x01 首充              0x02 七天乐
+	CAMPAIN							    	= 3; // 战役(有随机战利品)			按位与运算大于0 :  0x01 有战利品
+	DRAW									= 4; // 抽卡(免费抽卡)				按位与运算大于0 :  0x01 普通招募          0x02 高级招募
+	EXPLORE							    	= 5; // 探索(有奖励)				按位与运算大于0 :  0x01 有奖励
+	CHAT									= 6; // 聊天(有新聊天消息)          按位与运算大于0 :  0x01 世界频道          0x02 公会频道         0x04 招募频道         0x08 系统公告频道
+	MAIL									= 7; // 邮件(有未读邮件)            按位与运算大于0 :  0x01 有未读邮件
+	FRIEND							    	= 8; // 好友                        按位与运算大于0 :  0x01 好友助战可以搜索  0x02 有新好友申请
+	GOLD_HAND								= 9; // 点金手(免费点金)            按位与运算大于0 :  0x01 有免费点金
+	GUILD									= 10; // 公会(签到)                 按位与运算大于0 :  0x01 可签到
+	SIGN 									= 11; // 签到                       按位与运算大于0 :  0x01 可签到
+	MAX                                     = 20; // 最大值
+}
+
+// 红点通知
+message C2SRedPointStatesRequest {
+	repeated int32 Modules					= 1; // 需要功能序列  索引为红点功能定义，空序列为都需要
+}
+
+message S2CRedPointStatesResponse {
+	repeated int32 Modules                  = 1; // 需要功能序列
+	repeated int32 States 					= 2; // 状态序列  0 不提示  大于0 提示  索引为红点功能
+}
+
+// ----------------------------------- 引导 -----------------------------------
+// 引导数据保存
+message C2SGuideDataSaveRequest {
+	bytes Data 								= 1;
+}
+
+message S2CGuideDataSaveResponse {
+	bytes Data								= 1;
+}
+
+// 引导数据  进入游戏后主动通知
+message S2CGuideDataResponse {
+	bytes Data								= 1;
+}
+
+// ---------------------------------- 活动 ------------------------------------
+
+// 子活动数据
+message SubActivityData {
+	int32 SubId								= 1; // 子ID
+	int32 Value								= 2; // 值
+}
+
+
+// 活动数据
+message ActivityData {
+	int32 Id								= 1; // ID
+	int32 RemainSeconds						= 2; // 剩余时间
+	repeated SubActivityData SubDatas		= 3; // 子任务列表
+}
+
+// 请求活动数据
+message C2SActivityDataRequest {
+}
+
+message S2CActivityDataResponse {
+	repeated ActivityData Data				= 1; // 数据
+}
+
+// 活动数据通知
+message S2CActivityDataNotify {
+	int32 Id								= 1; // ID
+	int32 SubId								= 2; // 子ID
+	int32 Value								= 3; // 数据
+}
+
+// 活动兑换
+message C2SActivityExchangeRequest {
+	int32 Id								= 1;
+	int32 SubId								= 2;
+}
+
+message S2CActivityExchangeResponse {
+	int32 Id								= 1;
+	int32 SubId								= 2;
+}
+
+// ---------------------------------- 远征 ------------------------------------
+// 数据请求
+message C2SExpeditionDataRequest {
+}
+
+message ExpeditionSelfRole {
+	int32 Id								= 1; // 角色ID
+	int32 HpPercent 						= 2; // 当前血量百分比
+	int32 Weak								= 3; // 虚弱
+}
+message S2CExpeditionDataResponse {
+	int32 CurrLevel							= 1; // 当前关卡  0 开始
+	int32 RemainRefreshSeconds              = 2; // 剩余刷新时间
+	repeated ExpeditionSelfRole Roles		= 3; // 已使用的角色列表
+	int32 PurifyPoints						= 4; // 净化点
+}
+
+// 当前关卡数据
+message C2SExpeditionLevelDataRequest {
+}
+
+message ExpeditionEnemyRole {
+	int32 Position							= 1; // 位置
+	int32 TableId							= 2; // 配置ID
+	int32 Rank								= 3; // 品阶
+	int32 Level								= 4; // 等级
+	int32 HpPercent							= 5; // 血量百分比
+}
+message S2CExpeditionLevelDataResponse {
+	int32 PlayerId							= 1; // 玩家ID
+	string PlayerName						= 2; // 玩家名称
+	int32 PlayerLevel						= 3; // 玩家等级
+	int32 PlayerVipLevel					= 4; // 玩家VIP等级
+	int32 PlayerHead						= 5; // 玩家头像
+	int32 PlayerPower						= 6; // 玩家战力
+	repeated ExpeditionEnemyRole RoleList   = 7; // 对方角色列表
+	int32 GoldIncome						= 8; // 金币收益
+	int32 ExpeditionGoldIncome				= 9; // 远征币收益
+}
+
+// 远征当前关卡同步
+message S2CExpeditionCurrLevelSync {
+	int32 CurrLevel							= 1; // 当前关卡
+	repeated ExpeditionSelfRole SelfRoles   = 2; // 自己用过的角色
+	repeated ExpeditionEnemyRole EnemyRoles = 3; // 对手的角色
+}
+
+// 远征净化奖励
+message C2SExpeditionPurifyRewardRequest {
+}
+
+message S2CExpeditionPurifyRewardResponse {
+	repeated int32 Rewards					= 1; // 奖励物品
+}
+
+// 远征净化点同步
+message S2CExpeditionPurifyPointsSync {
+	int32 PurifyPoints						= 1; // 净化点
+}
+
+// ---------------------------------- 神器 ------------------------------------
+// 数据请求
+message C2SArtifactDataRequest {
+}
+
+message ArtifactData {
+	int32 Id 								= 1; // Id
+	int32 Level								= 2; // 等级
+	int32 Rank								= 3; // 品阶
+}
+
+message S2CArtifactDataResponse {
+	repeated ArtifactData ArtifactList		= 1; // 神器列表
+}
+
+// 神器解锁
+message C2SArtifactUnlockRequest {
+	int32 Id								= 1;
+}
+
+message S2CArtifactUnlockResponse {
+	int32 Id								= 1;
+}
+
+// 神器升级
+message C2SArtifactLevelUpRequest {
+	int32 Id								= 1;
+}
+
+message S2CArtifactLevelUpResponse {
+	int32 Id								= 1;
+	int32 Level								= 2;
+}
+
+// 神器升阶
+message C2SArtifactRankUpRequest {
+	int32 Id								= 1;
+}
+
+message S2CArtifactRankUpResponse {
+	int32 Id								= 1;
+	int32 Rank								= 2;
+}
+
+// 重铸神器
+message C2SArtifactResetRequest {
+	int32 Id								= 1;
+}
+
+message S2CArtifactResetResponse {
+	int32 Id								= 1;
+}
+
+// 某个神器数据更新
+message S2CArtifactDataUpdateNotify {
+	int32 Id								= 1;
+	int32 Level								= 2;
+	int32 Rank								= 3;
+}
+
+// --------------------------------- 嘉年华活动 --------------------------------
+// 评论，关注这两个任务服务器不做逻辑处理
+// 分享任务获得邀请码
+// 邀请好友任务被动更新，不用客户端请求 
+// 兑换和被邀请任务单独请求
+
+// 数据请求
+message C2SCarnivalDataRequest {
+}
+
+// 任务数据
+message CarnivalTaskData {
+	int32 Id								= 1; // 任务ID
+	int32 Value								= 2; // 进度数据
+	int32 Value2							= 3; // 进度数据2  用于邀请好友任务表示已邀请的好友数
+}
+
+message S2CCarnivalDataResponse {
+	int32 Round								= 1; // 当前轮次, 0表示没有
+	int32 RemainSeconds						= 2; // 剩余结束时间
+	repeated CarnivalTaskData TaskList		= 3; // 任务数据列表
+	string InviteCode						= 4; // 邀请码
+}
+
+// 设置任务进度加1
+message C2SCarnivalTaskSetRequest {
+	int32 TaskId							= 1; // 任务ID
+}
+
+message S2CCarnivalTaskSetResponse {
+	int32 TaskId							= 1; // 任务ID
+}
+
+// 兑换任务
+message C2SCarnivalItemExchangeRequest {
+	int32 TaskId							= 1; // 任务ID
+}
+
+message S2CCarnivalItemExchangeResponse {
+	int32 TaskId							= 1; // 任务ID
+}
+
+// 请求分享，获得邀请码
+message C2SCarnivalShareRequest {
+}
+
+message S2CCarnivalShareResponse {
+	string InviteCode						= 1; // 邀请码
+}
+
+// 被邀请任务
+message C2SCarnivalBeInvitedRequest {
+	string InviteCode						= 1; // 邀请码
+}
+
+message S2CCarnivalBeInvitedResponse {
+	string InviteCode						= 1; // 邀请码
+}
+
+// 任务进度通知，有更新时主动推送，用于客户端处理任务更新数据
+message S2CCarnivalTaskDataNotify {
+	CarnivalTaskData Data					= 1; // 数据
+}

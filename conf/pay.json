@@ -1,0 +1,12 @@
+{
+	"PayChannels": [
+		{
+			"KeyFile": "googlepay.key",
+			"Partner": "GooglePlay"
+		},
+		{
+			"KeyFile": "googlepay2.key",
+			"Partner": "Google_IdleRPG"
+		}
+	]
+}

@@ -1,0 +1,8 @@
+{
+	"LogConfigFile":"center_server_tracer.json",
+	"ListenLoginIP":"127.0.0.1:30000",
+	"MaxLoginConnections":1000,
+	"ListenGameIP":"127.0.0.1:30001",
+	"MaxGameConnections":1000,
+	"GmIP":"127.0.0.1:30002"
+}
