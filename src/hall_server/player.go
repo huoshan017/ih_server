@@ -340,7 +340,7 @@ func (p *Player) OnCreate() {
 		PlayerLevel: p.db.Info.GetLvl(),
 		PlayerHead:  p.db.Info.GetHead(),
 	}
-	share_data.AddUidPlayerInfo(hall_server.redis_conn, p.UniqueId, info)
+	share_data.SaveUidPlayerInfo(hall_server.redis_conn, p.UniqueId, info)
 }
 
 func (p *Player) OnInit() {

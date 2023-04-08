@@ -38,9 +38,6 @@ func (h *HallServer) Init() (ok bool) {
 	if !h.redis_conn.Connect(config.RedisServerIP) {
 		return
 	}
-	if !share_data.LoadUidsPlayerList(h.redis_conn) {
-		return
-	}
 
 	login_token_mgr.LoadRedisData()
 

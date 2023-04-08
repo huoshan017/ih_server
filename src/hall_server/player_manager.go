@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map"
 )
 
 type PlayerManager struct {
@@ -132,7 +132,7 @@ func (pm *PlayerManager) OnTick() {
 
 }
 
-//==============================================================================
+// ==============================================================================
 func (pm *PlayerManager) RegMsgHandler() {
 	if !config.DisableTestCommand {
 		msg_handler_mgr.SetPlayerMsgHandler(uint16(msg_client_message_id.MSGID_C2S_TEST_COMMAND), C2STestCommandHandler)
@@ -570,8 +570,13 @@ func C2SRedPointStatesHandler(p *Player, msg_data []byte) int32 {
 }
 
 func (p *Player) send_account_player_list() int32 {
-	share_data.LoadUidPlayerList(hall_server.redis_conn, p.UniqueId)
-	if share_data.GetUidPlayer(p.UniqueId, config.ServerId) == nil {
+	playerList := share_data.GetUidPlayerList(hall_server.redis_conn, p.UniqueId)
+	if playerList == nil {
+		log.Error("get account player (uid %v) list failed", p.UniqueId)
+		return -1
+	}
+
+	if playerList.GetInfo(config.ServerId) == nil {
 		share_data.SaveUidPlayerInfo(hall_server.redis_conn, p.UniqueId, &msg_client_message.AccountPlayerInfo{
 			ServerId:    config.ServerId,
 			PlayerName:  p.db.GetName(),
@@ -580,7 +585,7 @@ func (p *Player) send_account_player_list() int32 {
 		})
 	}
 	response := &msg_client_message.S2CAccountPlayerListResponse{
-		InfoList: share_data.GetUidPlayerList(p.UniqueId),
+		InfoList: playerList.GetList(),
 	}
 	p.Send(uint16(msg_client_message_id.MSGID_S2C_ACCOUNT_PLAYER_LIST_RESPONSE), response)
 	log.Debug("Account[%v] player list %v", p.Account, response)

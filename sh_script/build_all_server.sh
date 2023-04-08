@@ -1,7 +1,4 @@
 #!/bin/bash
-export GOPATH=$(pwd)/../../..
-set -x
-go build  -o ../bin/center_server ih_server/src/center_server
 go build  -o ../bin/login_server ih_server/src/login_server
 go build  -o ../bin/hall_server ih_server/src/hall_server
 go build  -o ../bin/rpc_server ih_server/src/rpc_server

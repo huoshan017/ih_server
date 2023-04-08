@@ -5,7 +5,7 @@ import (
 	"ih_server/libs/utils"
 	"sync"
 
-	"ih_server/proto/gen_go/client_message"
+	msg_client_message "ih_server/proto/gen_go/client_message"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gomodule/redigo/redis"
@@ -17,7 +17,13 @@ const (
 
 type PlayerList struct {
 	player_list        []*msg_client_message.AccountPlayerInfo
-	player_list_locker *sync.RWMutex
+	player_list_locker sync.RWMutex
+}
+
+func NewPlayerList(player_list []*msg_client_message.AccountPlayerInfo) *PlayerList {
+	return &PlayerList{
+		player_list: player_list,
+	}
 }
 
 func (pl *PlayerList) GetList() []*msg_client_message.AccountPlayerInfo {
@@ -26,17 +32,31 @@ func (pl *PlayerList) GetList() []*msg_client_message.AccountPlayerInfo {
 	return pl.player_list
 }
 
-var player_list_map map[string]*PlayerList
-var player_list_map_locker *sync.RWMutex
-
-func UidPlayerListInit() {
-	player_list_map = make(map[string]*PlayerList)
-	player_list_map_locker = &sync.RWMutex{}
+func (pl *PlayerList) Insert(player *msg_client_message.AccountPlayerInfo) {
+	pl.player_list_locker.Lock()
+	defer pl.player_list_locker.Unlock()
+	for i := 0; i < len(pl.player_list); i++ {
+		if pl.player_list[i].GetServerId() == player.GetServerId() {
+			return
+		}
+	}
+	pl.player_list = append(pl.player_list, player)
 }
 
-func LoadUidsPlayerList(redis_conn *utils.RedisConn) bool {
-	UidPlayerListInit()
+func (pl *PlayerList) GetInfo(serverId int32) *msg_client_message.AccountPlayerInfo {
+	pl.player_list_locker.RLock()
+	defer pl.player_list_locker.RUnlock()
+	for i := 0; i < len(pl.player_list); i++ {
+		if pl.player_list[i].GetServerId() == serverId {
+			return pl.player_list[i]
+		}
+	}
+	return nil
+}
 
+var player_list_map sync.Map
+
+/*func LoadUidsPlayerList(redis_conn *utils.RedisConn) bool {
 	var values map[string]string
 	values, err := redis.StringMap(redis_conn.Do("HGETALL", UID_PLAYER_LIST_KEY))
 	if err != nil {
@@ -51,91 +71,55 @@ func LoadUidsPlayerList(redis_conn *utils.RedisConn) bool {
 			return false
 		}
 
-		pl := &PlayerList{
-			player_list:        msg.InfoList,
-			player_list_locker: &sync.RWMutex{},
-		}
-		player_list_map[k] = pl
+		pl := NewPlayerList(msg.InfoList)
+		player_list_map.Store(k, pl)
 	}
 
 	return true
-}
+}*/
 
-func LoadUidPlayerList(redis_conn *utils.RedisConn, uid string) bool {
+func loadFromRedis(redis_conn *utils.RedisConn, uid string) []*msg_client_message.AccountPlayerInfo {
 	data, err := redis.Bytes(redis_conn.Do("HGET", UID_PLAYER_LIST_KEY, uid))
 	if err != nil {
 		log.Error("redis get hashset %v with key %v err %v", UID_PLAYER_LIST_KEY, uid, err.Error())
-		return false
+		return nil
 	}
 
 	var msg msg_client_message.S2CAccountPlayerListResponse
 	err = proto.Unmarshal(data, &msg)
 	if err != nil {
 		log.Error("uid %v S2CAccountPlayerListResponse data unmarshal err %v", uid, err.Error())
-		return false
+		return nil
 	}
 
-	player_list_map_locker.Lock()
-	pl := &PlayerList{
-		player_list:        msg.InfoList,
-		player_list_locker: &sync.RWMutex{},
-	}
-	player_list_map[uid] = pl
-	player_list_map_locker.Unlock()
-
-	return true
+	return msg.InfoList
 }
 
-func AddUidPlayerInfo(redis_conn *utils.RedisConn, uid string, info *msg_client_message.AccountPlayerInfo) {
-	player_list_map_locker.RLock()
-	pl := player_list_map[uid]
-	player_list_map_locker.RUnlock()
-	if pl == nil {
-		LoadUidPlayerList(redis_conn, uid)
+func GetUidPlayerList(redis_conn *utils.RedisConn, uid string) *PlayerList {
+	pl, o := player_list_map.Load(uid)
+	if o {
+		return pl.(*PlayerList)
 	}
-	SaveUidPlayerInfo(redis_conn, uid, info)
+
+	playerList := loadFromRedis(redis_conn, uid)
+	if playerList == nil {
+		return nil
+	}
+	pl = NewPlayerList(playerList)
+	player_list_map.Store(uid, pl)
+	return pl.(*PlayerList)
 }
 
 func SaveUidPlayerInfo(redis_conn *utils.RedisConn, uid string, info *msg_client_message.AccountPlayerInfo) {
-	player_list_map_locker.RLock()
-	player_list := player_list_map[uid]
-	player_list_map_locker.RUnlock()
-
-	if player_list == nil {
-		player_list_map_locker.Lock()
-		player_list = player_list_map[uid]
-		// double check
-		if player_list == nil {
-			player_list = &PlayerList{
-				player_list_locker: &sync.RWMutex{},
-			}
-			player_list_map[uid] = player_list
-		}
-		player_list_map_locker.Unlock()
+	player_list, o := player_list_map.Load(uid)
+	if !o {
+		player_list = NewPlayerList([]*msg_client_message.AccountPlayerInfo{info})
+		player_list_map.Store(uid, player_list)
+	} else {
+		player_list.(*PlayerList).Insert(info)
 	}
-
-	i := 0
-	for ; i < len(player_list.player_list); i++ {
-		p := player_list.player_list[i]
-		if p == nil {
-			continue
-		}
-		if p.GetServerId() == info.GetServerId() {
-			p.PlayerName = info.GetPlayerName()
-			p.PlayerLevel = info.GetPlayerLevel()
-			p.PlayerHead = info.GetPlayerHead()
-			break
-		}
-	}
-	if i >= len(player_list.player_list) {
-		player_list.player_list = append(player_list.player_list, info)
-		player_list_map_locker.Lock()
-		player_list_map[uid] = player_list
-		player_list_map_locker.Unlock()
-	}
-
 	var msg msg_client_message.S2CAccountPlayerListResponse
-	msg.InfoList = player_list.player_list
+	msg.InfoList = player_list.(*PlayerList).player_list
 	data, err := proto.Marshal(&msg)
 	if err != nil {
 		log.Error("redis marshal account %v info err %v", uid, err.Error())
@@ -148,25 +132,10 @@ func SaveUidPlayerInfo(redis_conn *utils.RedisConn, uid string, info *msg_client
 	}
 }
 
-func GetUidPlayerList(uid string) []*msg_client_message.AccountPlayerInfo {
-	player_list_map_locker.RLock()
-	defer player_list_map_locker.RUnlock()
-	pl := player_list_map[uid]
-	if pl == nil {
-		return nil
-	}
-	return pl.GetList()
-}
-
-func GetUidPlayer(uid string, server_id int32) *msg_client_message.AccountPlayerInfo {
-	player_list := GetUidPlayerList(uid)
+func GetUidPlayer(redis_conn *utils.RedisConn, uid string, server_id int32) *msg_client_message.AccountPlayerInfo {
+	player_list := GetUidPlayerList(redis_conn, uid)
 	if player_list == nil {
 		return nil
 	}
-	for _, p := range player_list {
-		if p.GetServerId() == server_id {
-			return p
-		}
-	}
-	return nil
+	return player_list.GetInfo(server_id)
 }

@@ -55,7 +55,6 @@ func (server *LoginServer) Init() (ok bool) {
 	server.acc2c_wait = make(map[string]*WaitCenterInfo)
 	server.acc2c_wait_lock = &sync.RWMutex{}
 	server.redis_conn = &utils.RedisConn{}
-	share_data.UidPlayerListInit()
 	account_mgr_init()
 
 	server.initialized = true
@@ -663,10 +662,14 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 		}
 	}
 
+	playerList := share_data.GetUidPlayerList(server.redis_conn, acc_row.GetUniqueId())
 	last_time := acc_row.GetLastGetAccountPlayerListTime()
 	if int32(now_time.Unix())-last_time >= 5*60 {
-		share_data.LoadUidPlayerList(server.redis_conn, acc_row.GetUniqueId())
-		acc_row.SetLastGetAccountPlayerListTime(int32(now_time.Unix()))
+		if playerList == nil {
+			log.Warn("load player(uid %v) list failed", acc_row.GetUniqueId())
+		} else {
+			acc_row.SetLastGetAccountPlayerListTime(int32(now_time.Unix()))
+		}
 	}
 
 	ban_row := dbc.BanPlayers.GetRow(acc_row.GetUniqueId())
@@ -728,7 +731,11 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 		}
 	}
 
-	response.InfoList = share_data.GetUidPlayerList(acc_row.GetUniqueId())
+	if playerList == nil {
+		response.InfoList = []*msg_client_message.AccountPlayerInfo{}
+	} else {
+		response.InfoList = playerList.GetList()
+	}
 	response.LastServerId = select_server_id
 	if channel == "guest" {
 		response.BoundAccount = acc_row.GetBindNewAccount()
