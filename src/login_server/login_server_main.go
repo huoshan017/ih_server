@@ -8,7 +8,6 @@ import (
 )
 
 var config server_config.LoginServerConfig
-var dbc DBC
 var server_list share_data.ServerList
 
 func main() {
@@ -40,7 +39,7 @@ func main() {
 		return
 	}
 
-	log.Event("连接数据库", config.MYSQL_NAME, log.Property{Name:"地址", Value:config.MYSQL_IP})
+	log.Event("连接数据库", config.MYSQL_NAME, log.Property{Name: "地址", Value: config.MYSQL_IP})
 	err := dbc.Conn(config.MYSQL_NAME, config.MYSQL_IP, config.MYSQL_ACCOUNT, config.MYSQL_PWD, func() string {
 		if config.MYSQL_COPY_PATH == "" {
 			return config.GetDBBackupPath()
