@@ -159,7 +159,7 @@ func C2LPlayerAccInfoHandler(conn *server_conn.ServerConn, msg proto.Message) {
 		return
 	}
 
-	hallid := res.GetHallId()
+	hallid := uint32(res.GetHallId())
 	hall_agent := hall_agent_manager.GetAgentByID(hallid)
 	if nil == hall_agent {
 		log.Error("C2LPlayerAccInfoHandler can not find hall(%d)", hallid)

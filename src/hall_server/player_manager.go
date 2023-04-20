@@ -541,7 +541,7 @@ func C2SPlayerChangeNameHandler(p *Player, msg_data []byte) int32 {
 	})
 
 	share_data.SaveUidPlayerInfo(hall_server.redis_conn, p.UniqueId, &msg_client_message.AccountPlayerInfo{
-		ServerId:    config.ServerId,
+		ServerId:    int32(config.ServerId),
 		PlayerName:  req.GetNewName(),
 		PlayerLevel: p.db.Info.GetLvl(),
 		PlayerHead:  p.db.Info.GetHead(),
@@ -578,7 +578,7 @@ func (p *Player) send_account_player_list() int32 {
 
 	if playerList.GetInfo(config.ServerId) == nil {
 		share_data.SaveUidPlayerInfo(hall_server.redis_conn, p.UniqueId, &msg_client_message.AccountPlayerInfo{
-			ServerId:    config.ServerId,
+			ServerId:    int32(config.ServerId),
 			PlayerName:  p.db.GetName(),
 			PlayerLevel: p.db.Info.GetLvl(),
 			PlayerHead:  p.db.Info.GetHead(),

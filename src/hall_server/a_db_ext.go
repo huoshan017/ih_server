@@ -39,7 +39,7 @@ func (d *DBC) on_preload() (err error) {
 
 func (d *dbGlobalRow) GetNextPlayerId() int32 {
 	curr_id := atomic.AddInt32(&d.m_CurrentPlayerId, 1)
-	new_id := share_data.GeneratePlayerId(config.ServerId, curr_id) //((config.ServerId << 20) & 0x7ff00000) | curr_id
+	new_id := share_data.GeneratePlayerId(int32(config.ServerId), curr_id) //((config.ServerId << 20) & 0x7ff00000) | curr_id
 	d.m_lock.UnSafeLock("dbGlobalRow.GetNextPlayerId")
 	d.m_CurrentPlayerId_changed = true
 	d.m_lock.UnSafeUnlock()
@@ -48,7 +48,7 @@ func (d *dbGlobalRow) GetNextPlayerId() int32 {
 
 func (d *dbGlobalRow) GetNextGuildId() int32 {
 	curr_id := atomic.AddInt32(&d.m_CurrentGuildId, 1)
-	new_id := share_data.GenerateGuildId(config.ServerId, curr_id) //((config.ServerId << 20) & 0x7ff00000) | curr_id
+	new_id := share_data.GenerateGuildId(int32(config.ServerId), curr_id) //((config.ServerId << 20) & 0x7ff00000) | curr_id
 	d.m_lock.UnSafeLock("dbGlobalRow.GetNextGuildId")
 	d.m_CurrentGuildId_changed = true
 	d.m_lock.UnSafeUnlock()

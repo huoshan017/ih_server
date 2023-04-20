@@ -1,9 +1,9 @@
 {
-    "db_pkg": "ih_login_db",
+    "db_pkg": "login_db",
     "charset": "utf8",
     "tables":[
         {
-            "name": "accounts",
+            "name": "Account",
             "primary_key": "account",
             "engine": "innodb",
             "fields": [
@@ -12,7 +12,7 @@
                 {"name":"password", "type":"varchar(32) not null default ''"},
                 {"name":"register_time", "type":"int unsigned not null default 0"},
                 {"name":"channel", "type":"varchar(16) not null default ''"},
-                {"name":"token", "type":"varchar(64) not null default ''"},
+                {"name":"token", "type":"varchar(128) not null default ''"},
                 {"name":"last_get_account_player_list_time", "type":"int unsigned not null default 0"},
                 {"name":"last_select_server_id", "type":"int unsigned not null default 0"},
                 {"name":"last_select_ios_server_id", "type":"int unsigned not null default 0"},
@@ -21,7 +21,7 @@
             ]
         },
         {
-            "name": "ban_players",
+            "name": "BanPlayer",
             "primary_key": "unique_id",
             "engine": "innodb",
             "fields": [
@@ -34,7 +34,7 @@
             ]
         },
         {
-            "name": "accounts_aaid",
+            "name": "AccountAAId",
             "primary_key": "acc_aaid",
             "engine": "innodb",
             "fields": [
@@ -43,5 +43,7 @@
                 {"name":"aaid", "type":"varchar(64) not null default ''"}
             ]
         }
+    ],
+    "field_structs": [
     ]
 }

@@ -121,7 +121,7 @@ type DaysTimeChecker struct {
 	next_time     int64
 }
 
-func (this *DaysTimeChecker) Init(last_save int32, time_value string, interval_days int32) bool {
+func (c *DaysTimeChecker) Init(last_save int32, time_value string, interval_days int32) bool {
 	var loc *time.Location
 	var err error
 	loc, err = time.LoadLocation("Local")
@@ -130,13 +130,13 @@ func (this *DaysTimeChecker) Init(last_save int32, time_value string, interval_d
 		return false
 	}
 
-	this.time_tm, err = time.ParseInLocation(TIME_LAYOUT, time_value, loc)
+	c.time_tm, err = time.ParseInLocation(TIME_LAYOUT, time_value, loc)
 	if err != nil {
 		log.Error("!!!!!!! Parse start time layout[%v] failed, err[%v]", TIME_LAYOUT, err.Error())
 		return false
 	}
 
-	if this.time_tm.Unix() >= time.Now().Unix() {
+	if c.time_tm.Unix() >= time.Now().Unix() {
 		log.Error("!!!!!!! Now time is Early to start time")
 		return false
 	}
@@ -146,15 +146,15 @@ func (this *DaysTimeChecker) Init(last_save int32, time_value string, interval_d
 		return false
 	}
 
-	this.interval_days = interval_days
+	c.interval_days = interval_days
 
-	this._init_next_time(last_save)
+	c._init_next_time(last_save)
 
 	return true
 }
 
-func (this *DaysTimeChecker) _init_next_time(last_save int32) {
-	if this.next_time != 0 {
+func (c *DaysTimeChecker) _init_next_time(last_save int32) {
+	if c.next_time != 0 {
 		return
 	}
 
@@ -165,39 +165,36 @@ func (this *DaysTimeChecker) _init_next_time(last_save int32) {
 	last_time := time.Unix(int64(last_save), 0)
 
 	// 上次重置的当天，用配置的时间
-	last_date := time.Date(last_time.Year(), last_time.Month(), last_time.Day(), this.time_tm.Hour(), this.time_tm.Minute(), this.time_tm.Second(), this.time_tm.Nanosecond(), this.time_tm.Location())
+	last_date := time.Date(last_time.Year(), last_time.Month(), last_time.Day(), c.time_tm.Hour(), c.time_tm.Minute(), c.time_tm.Second(), c.time_tm.Nanosecond(), c.time_tm.Location())
 	if last_date.Unix() < now_time.Unix() {
-		this.next_time = last_date.Unix() + int64(24*3600*this.interval_days)
+		c.next_time = last_date.Unix() + int64(24*3600*c.interval_days)
 	} else {
-		this.next_time = last_date.Unix() + int64(24*3600*(this.interval_days-1))
+		c.next_time = last_date.Unix() + int64(24*3600*(c.interval_days-1))
 	}
 	for {
-		if this.next_time > now_time.Unix() {
+		if c.next_time > now_time.Unix() {
 			break
 		}
-		this.next_time += int64(24 * 3600 * this.interval_days)
+		c.next_time += int64(24 * 3600 * c.interval_days)
 	}
 }
 
-func (this *DaysTimeChecker) ToNextTimePoint() {
-	if this.next_time == 0 {
+func (c *DaysTimeChecker) ToNextTimePoint() {
+	if c.next_time == 0 {
 		log.Warn("DaysTimeChecker function ToNextTimePoint call must after Init")
 		return
 	}
-	this.next_time += int64(24 * 3600 * this.interval_days)
+	c.next_time += int64(24 * 3600 * c.interval_days)
 }
 
-func (this *DaysTimeChecker) IsArrival(last_save int32) bool {
+func (c *DaysTimeChecker) IsArrival(last_save int32) bool {
 	now_time := time.Now()
-	if now_time.Unix() < this.next_time {
-		return false
-	}
-	return true
+	return now_time.Unix() >= c.next_time
 }
 
-func (this *DaysTimeChecker) RemainSecondsToNextRefresh(last_save int32) (remain_seconds int32) {
+func (c *DaysTimeChecker) RemainSecondsToNextRefresh(last_save int32) (remain_seconds int32) {
 	now_time := time.Now()
-	remain_seconds = int32(this.next_time - now_time.Unix())
+	remain_seconds = int32(c.next_time - now_time.Unix())
 	if remain_seconds < 0 {
 		remain_seconds = 0
 	}
@@ -233,9 +230,5 @@ func IsDayTimeRefresh(config_hour, config_minute, config_second int32, last_unix
 	}
 
 	today_refresh_time := time.Date(now_time.Year(), now_time.Month(), now_time.Day(), int(config_hour), int(config_minute), int(config_second), 0, time.Local)
-	if int32(today_refresh_time.Unix()) < last_unix_time {
-		return false
-	}
-
-	return true
+	return int32(today_refresh_time.Unix()) >= last_unix_time
 }

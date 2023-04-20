@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"ih_server/libs/log"
-	"io/ioutil"
 	"os"
 )
 
@@ -51,15 +50,15 @@ type CenterServerConfig struct {
 	MYSQL_COPY_PATH           string
 }
 
-func (this *CenterServerConfig) GetType() int32 {
+func (sc *CenterServerConfig) GetType() int32 {
 	return int32(SERVER_TYPE_CENTER)
 }
 
-func (this *CenterServerConfig) GetLogConfigFile() string {
-	return this.LogConfigFile
+func (sc *CenterServerConfig) GetLogConfigFile() string {
+	return sc.LogConfigFile
 }
 
-func (this *CenterServerConfig) GetDBBackupPath() string {
+func (sc *CenterServerConfig) GetDBBackupPath() string {
 	return ""
 }
 
@@ -74,12 +73,12 @@ type LoginServerConfig struct {
 	InnerVersion       string
 	ServerName         string
 	ListenClientIP     string
-	ListenGameIP       string // 监听game_server连接
-	MaxGameConnections int32  // game_server最大连接数
-	LogConfigFile      string // 日志配置文件
-	CenterServerIP     string // 连接CenterServer
-	RedisServerIP      string // 连接redis
-	VerifyAccount      bool   // 验证账号
+	ListenGameIP       string   // 监听game_server连接
+	MaxGameConnections int32    // game_server最大连接数
+	LogConfigFile      string   // 日志配置文件
+	CenterServerIP     string   // 连接CenterServer
+	RedisIPs           []string // 连接redis-cluster
+	VerifyAccount      bool     // 验证账号
 
 	Facebook []*FacebookConfig // facebook
 
@@ -94,16 +93,16 @@ type LoginServerConfig struct {
 	DBCST_MAX       int
 }
 
-func (this *LoginServerConfig) GetType() int32 {
+func (sc *LoginServerConfig) GetType() int32 {
 	return int32(SERVER_TYPE_LOGIN)
 }
 
-func (this *LoginServerConfig) GetLogConfigFile() string {
-	return this.LogConfigFile
+func (sc *LoginServerConfig) GetLogConfigFile() string {
+	return sc.LogConfigFile
 }
 
-func (this *LoginServerConfig) GetDBBackupPath() string {
-	return DBBackUpDir + this.MYSQL_NAME
+func (sc *LoginServerConfig) GetDBBackupPath() string {
+	return DBBackUpDir + sc.MYSQL_NAME
 }
 
 type PayChannel struct {
@@ -113,7 +112,7 @@ type PayChannel struct {
 
 // 游戏服务器配置
 type GameServerConfig struct {
-	ServerId             int32
+	ServerId             uint32
 	InnerVersion         string
 	ServerName           string
 	ListenRoomServerIP   string
@@ -127,7 +126,7 @@ type GameServerConfig struct {
 	MatchServerIP        string // 匹配服务器IP
 	RecvMaxMSec          int64  // 接收超时毫秒数
 	SendMaxMSec          int64  // 发送超时毫秒数
-	RedisServerIP        string
+	RedisIPs             []string
 	MYSQL_NAME           string
 	MYSQL_IP             string
 	MYSQL_ACCOUNT        string
@@ -140,16 +139,16 @@ type GameServerConfig struct {
 	PayChannelList       []*PayChannel // 支付渠道
 }
 
-func (this *GameServerConfig) GetType() int32 {
+func (sc *GameServerConfig) GetType() int32 {
 	return int32(SERVER_TYPE_GAME)
 }
 
-func (this *GameServerConfig) GetLogConfigFile() string {
-	return this.LogConfigFile
+func (sc *GameServerConfig) GetLogConfigFile() string {
+	return sc.LogConfigFile
 }
 
-func (this *GameServerConfig) GetDBBackupPath() string {
-	return DBBackUpDir + this.MYSQL_NAME
+func (sc *GameServerConfig) GetDBBackupPath() string {
+	return DBBackUpDir + sc.MYSQL_NAME
 }
 
 // RPC服务器配置
@@ -157,7 +156,7 @@ type RpcServerConfig struct {
 	LogConfigFile    string
 	ListenIP         string
 	MaxConnections   int
-	RedisServerIP    string
+	RedisIPs         []string
 	GmIP             string
 	GmServerUseHttps bool
 	MYSQL_NAME       string
@@ -169,16 +168,16 @@ type RpcServerConfig struct {
 	DBCST_MAX        int
 }
 
-func (this *RpcServerConfig) GetType() int32 {
+func (sc *RpcServerConfig) GetType() int32 {
 	return int32(SERVER_TYPE_RPC)
 }
 
-func (this *RpcServerConfig) GetLogConfigFile() string {
-	return this.LogConfigFile
+func (sc *RpcServerConfig) GetLogConfigFile() string {
+	return sc.LogConfigFile
 }
 
-func (this *RpcServerConfig) GetDBBackupPath() string {
-	return DBBackUpDir + this.MYSQL_NAME
+func (sc *RpcServerConfig) GetDBBackupPath() string {
+	return DBBackUpDir + sc.MYSQL_NAME
 }
 
 // 测试客户端配置
@@ -196,15 +195,15 @@ type TestClientConfig struct {
 	UseHttps          bool
 }
 
-func (this *TestClientConfig) GetType() int32 {
+func (sc *TestClientConfig) GetType() int32 {
 	return int32(SERVER_TYPE_TEST_CLIENT)
 }
 
-func (this *TestClientConfig) GetLogConfigFile() string {
-	return this.LogConfigFile
+func (sc *TestClientConfig) GetLogConfigFile() string {
+	return sc.LogConfigFile
 }
 
-func (this *TestClientConfig) GetDBBackupPath() string {
+func (sc *TestClientConfig) GetDBBackupPath() string {
 	return ""
 }
 
@@ -214,15 +213,15 @@ type GmTestConfig struct {
 	LogConfigFile string
 }
 
-func (this *GmTestConfig) GetType() int32 {
+func (sc *GmTestConfig) GetType() int32 {
 	return int32(SERVER_TYPE_TEST_GM)
 }
 
-func (this *GmTestConfig) GetLogConfigFile() string {
-	return this.LogConfigFile
+func (sc *GmTestConfig) GetLogConfigFile() string {
+	return sc.LogConfigFile
 }
 
-func (this *GmTestConfig) GetDBBackupPath() string {
+func (sc *GmTestConfig) GetDBBackupPath() string {
 	return ""
 }
 
@@ -243,7 +242,7 @@ func _get_config_path(config_file string) (config_path string) {
 
 func ServerConfigLoad(config_file string, config ServerConfig) bool {
 	config_path := _get_config_path(config_file)
-	data, err := ioutil.ReadFile(config_path)
+	data, err := os.ReadFile(config_path)
 	if err != nil {
 		fmt.Printf("读取配置文件[%v]失败 %v", config_path, err)
 		return false

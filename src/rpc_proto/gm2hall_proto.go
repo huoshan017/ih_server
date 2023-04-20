@@ -107,12 +107,12 @@ type GmPlayerInfoResponse struct {
 
 // 查询在线人数
 type GmOnlinePlayerNumCmd struct {
-	ServerId int32
+	ServerId uint32
 }
 
 // 查询在线人数结果
 type GmOnlinePlayerNumResponse struct {
-	PlayerNum []int32
+	PlayerNum []uint32
 }
 
 // 发送月卡
@@ -185,7 +185,7 @@ type GmGuildInfoResponse struct {
 
 // 获取服务器公会列表
 type GmGuildListCmd struct {
-	ServerId int32
+	ServerId uint32
 }
 
 // 获取服务器公会列表结果

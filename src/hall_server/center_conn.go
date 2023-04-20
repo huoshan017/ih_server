@@ -99,7 +99,7 @@ func (c *CenterConnection) OnConnect(s *server_conn.ServerConn) {
 	log.Trace("CenterServer [%v][%v] on CenterServer connect", config.ServerId, config.ServerName)
 
 	notify := &msg_server_message.H2CHallServerRegister{}
-	notify.ServerId = config.ServerId
+	notify.ServerId = int32(config.ServerId)
 	notify.ServerName = config.ServerName
 	notify.ListenClientIP = config.ListenClientOutIP
 	notify.ListenRoomIP = config.ListenRoomServerIP

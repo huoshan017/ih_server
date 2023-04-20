@@ -6,8 +6,6 @@ import (
 	"ih_server/libs/server_conn"
 	"sync"
 	"time"
-
-	"github.com/gomodule/redigo/redis"
 )
 
 const (
@@ -44,13 +42,14 @@ func (m *LoginTokenMgr) Init() bool {
 }
 
 func (m *LoginTokenMgr) LoadRedisData() int32 {
-	string_map, err := redis.StringMap(hall_server.redis_conn.Do("HGETALL", UID_TOKEN_KEY))
+	cmd := hall_server.redis_conn.HGetAll("UID_TOKEN_KEY")
+	result, err := cmd.Result()
 	if err != nil {
-		log.Error("redis获取集合[%v]数据失败[%v]", UID_TOKEN_KEY, err.Error())
+		log.Error("redis获取集合[%v]数据失败[%v]", UID_TOKEN_KEY, err)
 		return -1
 	}
 
-	for k, item := range string_map {
+	for k, item := range result {
 		jitem := &RedisLoginTokenInfo{}
 		if err := json.Unmarshal([]byte(item), jitem); err != nil {
 			log.Error("##### Load RedisLoginTokenInfo item[%v] error[%v]", item, err.Error())
@@ -77,8 +76,8 @@ func _save_redis_login_token(uid, token string, now_time time.Time, player_id in
 		log.Error("##### Serialize item[%v] error[%v]", item, err.Error())
 		return
 	}
-	err = hall_server.redis_conn.Post("HSET", UID_TOKEN_KEY, uid, string(bytes))
-	if err != nil {
+	cmd := hall_server.redis_conn.Do("HSET", UID_TOKEN_KEY, uid, string(bytes))
+	if cmd.Err() != nil {
 		log.Error("redis设置集合[%v]数据失败[%v]", UID_TOKEN_KEY, err.Error())
 		return
 	}

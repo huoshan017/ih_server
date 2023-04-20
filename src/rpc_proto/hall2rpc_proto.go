@@ -20,7 +20,7 @@ type H2R_Pong struct {
 // 大厅通知RPC监听端口
 type H2R_ListenIPNoitfy struct {
 	ListenIP string
-	ServerId int32
+	ServerId uint32
 }
 type H2R_ListenIPResult struct {
 }

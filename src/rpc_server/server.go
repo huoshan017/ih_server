@@ -16,8 +16,8 @@ type RpcServer struct {
 	shutdown_completed    bool
 	ticker                *timer.TickTimer
 	initialized           bool
-	rpc_service           *rpc.Service             // rpc服务
-	hall_rpc_clients      map[int32]*HallRpcClient // 连接HallServer的rpc客户端(key: HallId, value: *rpc.Client)
+	rpc_service           *rpc.Service              // rpc服务
+	hall_rpc_clients      map[uint32]*HallRpcClient // 连接HallServer的rpc客户端(key: HallId, value: *rpc.Client)
 	hall_rpc_clients_lock *sync.RWMutex
 }
 
@@ -151,7 +151,7 @@ func (server *RpcServer) Shutdown() {
 
 func (server *RpcServer) init_hall_clients() bool {
 	if server.hall_rpc_clients == nil {
-		server.hall_rpc_clients = make(map[int32]*HallRpcClient)
+		server.hall_rpc_clients = make(map[uint32]*HallRpcClient)
 	}
 	if server.hall_rpc_clients_lock == nil {
 		server.hall_rpc_clients_lock = &sync.RWMutex{}
@@ -173,7 +173,7 @@ func (server *RpcServer) uninit_hall_clients() {
 	}
 }
 
-func (server *RpcServer) connect_hall(addr string, server_id int32) bool {
+func (server *RpcServer) connect_hall(addr string, server_id uint32) bool {
 	server.hall_rpc_clients_lock.Lock()
 	defer server.hall_rpc_clients_lock.Unlock()
 
@@ -240,7 +240,7 @@ func (server *RpcServer) check_connect() {
 }
 */
 
-func (server *RpcServer) get_rpc_client(server_id int32) *HallRpcClient {
+func (server *RpcServer) get_rpc_client(server_id uint32) *HallRpcClient {
 	server.hall_rpc_clients_lock.RLock()
 	defer server.hall_rpc_clients_lock.RUnlock()
 	return server.hall_rpc_clients[server_id]

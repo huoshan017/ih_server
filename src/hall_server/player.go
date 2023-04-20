@@ -335,7 +335,7 @@ func (p *Player) OnCreate() {
 		p.db.Info.SetHead(head_id)
 	}
 	info := &msg_client_message.AccountPlayerInfo{
-		ServerId:    config.ServerId,
+		ServerId:    int32(config.ServerId),
 		PlayerName:  p.db.GetName(),
 		PlayerLevel: p.db.Info.GetLvl(),
 		PlayerHead:  p.db.Info.GetHead(),
@@ -993,7 +993,7 @@ func (p *Player) change_head(new_head int32) int32 {
 	p.Send(uint16(msg_client_message_id.MSGID_S2C_PLAYER_CHANGE_HEAD_RESPONSE), response)
 
 	share_data.SaveUidPlayerInfo(hall_server.redis_conn, p.UniqueId, &msg_client_message.AccountPlayerInfo{
-		ServerId:    config.ServerId,
+		ServerId:    int32(config.ServerId),
 		PlayerName:  p.db.GetName(),
 		PlayerLevel: p.db.Info.GetLvl(),
 		PlayerHead:  new_head,

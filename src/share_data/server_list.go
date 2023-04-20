@@ -19,7 +19,7 @@ const (
 )
 
 type HallServerInfo struct {
-	Id        int32
+	Id        uint32
 	Name      string
 	IP        string
 	Weight    int32
@@ -29,7 +29,7 @@ type HallServerInfo struct {
 
 type CrossInfo struct {
 	Id        int32
-	ServerIds []int32
+	ServerIds []uint32
 }
 
 type ServerList struct {
@@ -38,7 +38,7 @@ type ServerList struct {
 	TotalWeight       int32
 	CrossList         []*CrossInfo
 	Id2Cross          map[int32]*CrossInfo
-	ServerId2Cross    map[int32]*CrossInfo
+	ServerId2Cross    map[uint32]*CrossInfo
 	IosVerifyServerId int32
 	ConfigPath        string
 	MD5Str            string
@@ -84,7 +84,7 @@ func (sl *ServerList) _read_config(data []byte) bool {
 
 	if sl.CrossList != nil {
 		sl.Id2Cross = make(map[int32]*CrossInfo)
-		sl.ServerId2Cross = make(map[int32]*CrossInfo)
+		sl.ServerId2Cross = make(map[uint32]*CrossInfo)
 		for i := 0; i < len(sl.CrossList); i++ {
 			c := sl.CrossList[i]
 			if c == nil {
@@ -147,7 +147,7 @@ func (sl *ServerList) RereadConfig() bool {
 	return true
 }
 
-func (sl *ServerList) GetServerById(id int32) (info *HallServerInfo) {
+func (sl *ServerList) GetServerById(id uint32) (info *HallServerInfo) {
 	sl.Locker.RLock()
 	defer sl.Locker.RUnlock()
 
@@ -209,7 +209,7 @@ func (sl *ServerList) GetServers(client_os string) (servers []*HallServerInfo) {
 	return
 }
 
-func (sl *ServerList) HasServerId(server_id int32) bool {
+func (sl *ServerList) HasServerId(server_id uint32) bool {
 	sl.Locker.RLock()
 	defer sl.Locker.RUnlock()
 
@@ -230,13 +230,13 @@ func (sl *ServerList) GetCrossServers(id int32) *CrossInfo {
 	return sl.Id2Cross[id]
 }
 
-func (sl *ServerList) GetCrossByServerId(server_id int32) *CrossInfo {
+func (sl *ServerList) GetCrossByServerId(server_id uint32) *CrossInfo {
 	sl.Locker.RLock()
 	defer sl.Locker.RUnlock()
 	return sl.ServerId2Cross[server_id]
 }
 
-func (sl *ServerList) IsSameCross(server1_id, server2_id int32) bool {
+func (sl *ServerList) IsSameCross(server1_id, server2_id uint32) bool {
 	sl.Locker.RLock()
 	defer sl.Locker.RUnlock()
 

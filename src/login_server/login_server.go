@@ -10,9 +10,10 @@ import (
 	msg_client_message "ih_server/proto/gen_go/client_message"
 	msg_client_message_id "ih_server/proto/gen_go/client_message_id"
 	msg_server_message "ih_server/proto/gen_go/server_message"
+	"ih_server/src/login_db"
 	"ih_server/src/server_config"
 	"ih_server/src/share_data"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"regexp"
@@ -22,6 +23,9 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	mysql_base "github.com/huoshan017/mysql-go/base"
+	mysql_manager "github.com/huoshan017/mysql-go/manager"
+	"github.com/huoshan017/ponu/cache"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -30,6 +34,11 @@ type WaitCenterInfo struct {
 }
 
 type LoginServer struct {
+	db_mgr             mysql_manager.DB
+	accountMgr         *cache.LFUWithLock[string, *AccountInfo]
+	account_table      *login_db.AccountTable
+	ban_player_table   *login_db.BanPlayerTable
+	account_aaid_table *login_db.AccountAAIdTable
 	start_time         time.Time
 	quit               bool
 	shutdown_lock      *sync.Mutex
@@ -50,12 +59,30 @@ type LoginServer struct {
 var server *LoginServer
 
 func (server *LoginServer) Init() (ok bool) {
+	log.Event("连接数据库", config.MYSQL_NAME, log.Property{Name: "地址", Value: config.MYSQL_IP})
+
+	err := server.db_mgr.Connect(config.MYSQL_IP, config.MYSQL_ACCOUNT, config.MYSQL_PWD, config.MYSQL_NAME)
+	if err != nil {
+		log.Error("connect db err: %v", err.Error())
+		return
+	}
+
+	go server.db_mgr.Run()
+
+	log.Info("db running...\n")
+
+	server.accountMgr = cache.NewLFUWithLock[string, *AccountInfo](10000)
+
+	tables := login_db.NewTablesManager(&server.db_mgr)
+	server.account_table = tables.GetAccountTable()
+	server.ban_player_table = tables.GetBanPlayerTable()
+
 	server.start_time = time.Now()
 	server.shutdown_lock = &sync.Mutex{}
 	server.acc2c_wait = make(map[string]*WaitCenterInfo)
 	server.acc2c_wait_lock = &sync.RWMutex{}
 	server.redis_conn = &utils.RedisConn{}
-	account_mgr_init()
+	//account_mgr_init()
 
 	server.initialized = true
 
@@ -63,7 +90,7 @@ func (server *LoginServer) Init() (ok bool) {
 }
 
 func (server *LoginServer) Start(use_https bool) bool {
-	if !server.redis_conn.Connect(config.RedisServerIP) {
+	if !server.redis_conn.Connect(config.RedisIPs) {
 		return false
 	}
 
@@ -151,8 +178,7 @@ func (server *LoginServer) Shutdown() {
 	center_conn.ShutDown()
 	hall_agent_manager.net.Shutdown()
 
-	dbc.Save(false)
-	dbc.Shutdown()
+	server.db_mgr.Save()
 
 	log.Trace("关闭游戏主循环耗时 %v 秒", time.Since(begin).Seconds())
 }
@@ -261,7 +287,7 @@ func (server *LoginHttpHandle) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	var act_str, url_str string
 	url_str = r.URL.String()
 	idx := strings.Index(url_str, "?")
-	if -1 == idx {
+	if idx == -1 {
 		act_str = url_str
 	} else {
 		act_str = string([]byte(url_str)[:idx])
@@ -325,7 +351,9 @@ func register_handler(account, password string, is_guest bool) (err_code int32, 
 		return -1, nil
 	}
 
-	if dbc.Accounts.GetRow(account) != nil {
+	_, err := server.account_table.SelectByPrimaryField(account)
+	//if dbc.Accounts.GetRow(account) != nil {
+	if err == nil {
 		log.Error("Account[%v] already exists", account)
 		return int32(msg_client_message.E_ERR_ACCOUNT_ALREADY_REGISTERED), nil
 	}
@@ -343,16 +371,22 @@ func register_handler(account, password string, is_guest bool) (err_code int32, 
 		return
 	}
 
-	row := dbc.Accounts.AddRow(account)
+	row := server.account_table.NewRecord(account)
+	row.Set_unique_id(uid)
+	row.Set_password(password)
+	row.Set_register_time(uint32(time.Now().Unix()))
+	server.account_table.Insert(row)
+	/*row := dbc.Accounts.AddRow(account)
 	if row == nil {
 		err_code = -1
 		return
 	}
 	row.SetUniqueId(uid)
 	row.SetPassword(password)
-	row.SetRegisterTime(int32(time.Now().Unix()))
+	row.SetRegisterTime(int32(time.Now().Unix()))*/
 	if is_guest {
-		row.SetChannel("guest")
+		//row.SetChannel("guest")
+		row.Set_channel("guest")
 	}
 
 	var response msg_client_message.S2CRegisterResponse = msg_client_message.S2CRegisterResponse{
@@ -361,7 +395,6 @@ func register_handler(account, password string, is_guest bool) (err_code int32, 
 		IsGuest:  is_guest,
 	}
 
-	var err error
 	resp_data, err = proto.Marshal(&response)
 	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_INTERNAL)
@@ -375,7 +408,7 @@ func register_handler(account, password string, is_guest bool) (err_code int32, 
 	return
 }
 
-func bind_new_account_handler(server_id int32, account, password, new_account, new_password, new_channel string) (err_code int32, resp_data []byte) {
+func bind_new_account_handler(server_id uint32, account, password, new_account, new_password, new_channel string) (err_code int32, resp_data []byte) {
 	if len(new_account) > 128 {
 		log.Error("Account[%v] length %v too long", new_account, len(new_account))
 		return -1, nil
@@ -392,39 +425,46 @@ func bind_new_account_handler(server_id int32, account, password, new_account, n
 		return
 	}
 
-	row := dbc.Accounts.GetRow(account)
-	if row == nil {
+	//row := dbc.Accounts.GetRow(account)
+	row, err := server.account_table.SelectByPrimaryField(account)
+	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_NOT_REGISTERED)
 		log.Error("Account %v not registered, cant bind new account", account)
 		return
 	}
 
-	ban_row := dbc.BanPlayers.GetRow(row.GetUniqueId())
-	if ban_row != nil && ban_row.GetStartTime() > 0 {
+	//ban_row := dbc.BanPlayers.GetRow(row.GetUniqueId())
+	var ban_row *login_db.BanPlayer
+	ban_row, err = server.ban_player_table.SelectByPrimaryField(row.Get_unique_id())
+	if err == nil && ban_row.Get_start_time() > 0 {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_BE_BANNED)
 		log.Error("Account %v has been banned, cant login", account)
 		return
 	}
 
-	if row.GetPassword() != password {
+	//if row.GetPassword() != password {
+	if row.Get_password() != password {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_PASSWORD_INVALID)
 		log.Error("Account %v password %v invalid, cant bind new account", account, password)
 		return
 	}
 
-	if row.GetChannel() != "guest" && row.GetChannel() != "facebook" {
+	//if row.GetChannel() != "guest" && row.GetChannel() != "facebook" {
+	if row.Get_channel() != "guest" && row.Get_channel() != "facebook" {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_NOT_GUEST)
 		log.Error("Account %v not guest and not facebook user", account)
 		return
 	}
 
-	if row.GetChannel() != "facebook" && row.GetBindNewAccount() != "" {
+	//if row.GetChannel() != "facebook" && row.GetBindNewAccount() != "" {
+	if row.Get_channel() != "facebook" && row.Get_bind_new_account() != "" {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_ALREADY_BIND)
 		log.Error("Account %v already bind", account)
 		return
 	}
 
-	if dbc.Accounts.GetRow(new_account) != nil {
+	//if dbc.Accounts.GetRow(new_account) != nil {
+	if _, err = server.account_table.SelectByPrimaryField(new_account); err == nil {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_NEW_BIND_ALREADY_EXISTS)
 		log.Error("New Account %v to bind already exists", new_account)
 		return
@@ -448,26 +488,38 @@ func bind_new_account_handler(server_id int32, account, password, new_account, n
 		}
 	}
 
-	row.SetBindNewAccount(new_account)
-	register_time := row.GetRegisterTime()
-	uid := row.GetUniqueId()
+	//row.SetBindNewAccount(new_account)
+	row.Set_bind_new_account(new_account)
+	server.account_table.UpdateAll(row)
+	//register_time := row.GetRegisterTime()
+	register_time := row.Get_register_time()
+	//uid := row.GetUniqueId()
+	uid := row.Get_unique_id()
 
-	last_server_id := row.GetLastSelectServerId()
+	//last_server_id := row.GetLastSelectServerId()
+	last_server_id := row.Get_last_select_server_id()
 
-	row = dbc.Accounts.AddRow(new_account)
-	if row == nil {
-		err_code = -1
-		log.Error("Account %v bind new account %v database error", account, new_account)
-		return
-	}
+	//row = dbc.Accounts.AddRow(new_account)
+	row = server.account_table.NewRecord(new_account)
+	//if row == nil {
+	//	err_code = -1
+	//	log.Error("Account %v bind new account %v database error", account, new_account)
+	//	return
+	//}
 
 	if new_channel == "" {
-		row.SetPassword(new_password)
+		//row.SetPassword(new_password)
+		row.Set_password(new_password)
 	}
-	row.SetRegisterTime(register_time)
-	row.SetUniqueId(uid)
-	row.SetOldAccount(account)
-	row.SetLastSelectServerId(last_server_id)
+	//row.SetRegisterTime(register_time)
+	row.Set_register_time(register_time)
+	//row.SetUniqueId(uid)
+	row.Set_unique_id(uid)
+	//row.SetOldAccount(account)
+	row.Set_old_account(account)
+	//row.SetLastSelectServerId(last_server_id)
+	row.Set_last_select_server_id(last_server_id)
+	server.account_table.UpdateAll(row)
 
 	//dbc.Accounts.RemoveRow(account) // 暂且不删除
 
@@ -492,7 +544,6 @@ func bind_new_account_handler(server_id int32, account, password, new_account, n
 		NewChannel:  new_channel,
 	}
 
-	var err error
 	resp_data, err = proto.Marshal(response)
 	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_INTERNAL)
@@ -543,7 +594,7 @@ func _verify_facebook_login(user_id, input_token string) int32 {
 		}
 
 		var data []byte
-		data, err = ioutil.ReadAll(resp.Body)
+		data, err = io.ReadAll(resp.Body)
 		if nil != err {
 			log.Error("Read facebook verify result err(%s) !", err.Error())
 			continue
@@ -584,27 +635,49 @@ func _verify_facebook_login(user_id, input_token string) int32 {
 func _save_aaid(account, aaid string) {
 	if aaid != "" {
 		acc_aaid := account + "_" + aaid
-		acc_aaid_row := dbc.AccountAAIDs.GetRow(acc_aaid)
-		if acc_aaid_row == nil {
-			acc_aaid_row = dbc.AccountAAIDs.AddRow(acc_aaid)
-			acc_aaid_row.SetAccount(account)
-			acc_aaid_row.SetAAID(aaid)
+		//acc_aaid_row := dbc.AccountAAIDs.GetRow(acc_aaid)
+		_, err := server.account_aaid_table.SelectByPrimaryField(acc_aaid)
+		if err != nil {
+			//acc_aaid_row = dbc.AccountAAIDs.AddRow(acc_aaid)
+			acc_aaid_row := server.account_aaid_table.NewRecord(acc_aaid)
+			//acc_aaid_row.SetAccount(account)
+			acc_aaid_row.Set_account(account)
+			//acc_aaid_row.SetAAID(aaid)
+			acc_aaid_row.Set_aaid(aaid)
+			server.account_aaid_table.UpdateAll(acc_aaid_row)
 		}
 	}
 }
 
 func login_handler(account, password, channel, client_os, aaid string) (err_code int32, resp_data []byte) {
-	var err error
-	acc_row := dbc.Accounts.GetRow(account)
+	var (
+		isNew bool
+		err   error
+	)
+	accInfo, o := server.accountMgr.Get(account)
+	if !o {
+		acc_row, err := server.account_table.SelectByPrimaryField(account)
+		if err == nil {
+			accInfo = newAccountInfo()
+			accInfo.acc_row = acc_row
+			server.accountMgr.Set(account, accInfo)
+		} else {
+			if err == mysql_base.ErrNoRows {
+				isNew = true
+			}
+		}
+	}
+
 	now_time := time.Now()
 	if config.VerifyAccount {
 		if channel == "" {
-			if acc_row == nil {
+			if err != nil {
 				err_code = int32(msg_client_message.E_ERR_PLAYER_ACC_OR_PASSWORD_ERROR)
 				log.Error("Account %v not exist", account)
 				return
 			}
-			if acc_row.GetPassword() != password {
+			//if acc_row.GetPassword() != password {
+			if accInfo.acc_row.Get_password() != password {
 				err_code = int32(msg_client_message.E_ERR_PLAYER_ACC_OR_PASSWORD_ERROR)
 				log.Error("Account %v password %v invalid", account, password)
 				return
@@ -614,27 +687,31 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 			if err_code < 0 {
 				return
 			}
-			if acc_row == nil {
-				acc_row = dbc.Accounts.AddRow(account)
-				if acc_row == nil {
-					log.Error("Account %v add row with channel facebook failed")
-					return -1, nil
-				}
-				acc_row.SetChannel("facebook")
-				acc_row.SetRegisterTime(int32(now_time.Unix()))
+			if err != nil {
+				//acc_row = dbc.Accounts.AddRow(account)
+				accInfo.acc_row = server.account_table.NewRecord(account)
+				//if acc_row == nil {
+				//	log.Error("Account %v add row with channel facebook failed")
+				//	return -1, nil
+				//}
+				//acc_row.SetChannel("facebook")
+				accInfo.acc_row.Set_channel("facebook")
+				//acc_row.SetRegisterTime(int32(now_time.Unix()))
+				accInfo.acc_row.Set_register_time(uint32(now_time.Unix()))
 			}
-			acc_row.SetPassword(password)
+			//acc_row.SetPassword(password)
+			accInfo.acc_row.Set_password(password)
 		} else if channel == "guest" {
-			if acc_row == nil {
-				acc_row = dbc.Accounts.AddRow(account)
-				if acc_row == nil {
-					log.Error("Account %v add row with channel guest failed")
-					return -1, nil
-				}
-				acc_row.SetChannel("guest")
-				acc_row.SetRegisterTime(int32(now_time.Unix()))
+			if accInfo.acc_row == nil {
+				//acc_row = dbc.Accounts.AddRow(account)
+				accInfo.acc_row = server.account_table.NewRecord(account)
+				//acc_row.SetChannel("guest")
+				accInfo.acc_row.Set_channel("guest")
+				//acc_row.SetRegisterTime(int32(now_time.Unix()))
+				accInfo.acc_row.Set_register_time(uint32(now_time.Unix()))
 			} else {
-				if acc_row.GetPassword() != password {
+				//if acc_row.GetPassword() != password {
+				if accInfo.acc_row.Get_password() != password {
 					err_code = int32(msg_client_message.E_ERR_PLAYER_ACC_OR_PASSWORD_ERROR)
 					log.Error("Account %v password %v invalid", account, password)
 					return
@@ -645,35 +722,44 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 			return -1, nil
 		}
 	} else {
-		if acc_row == nil {
-			acc_row = dbc.Accounts.AddRow(account)
-			if acc_row == nil {
-				log.Error("Account %v add row without verify failed")
-				return -1, nil
-			}
-			acc_row.SetRegisterTime(int32(now_time.Unix()))
+		if accInfo.acc_row == nil {
+			//acc_row = dbc.Accounts.AddRow(account)
+			accInfo.acc_row = server.account_table.NewRecord(account)
+			//if acc_row == nil {
+			//	log.Error("Account %v add row without verify failed")
+			//	return -1, nil
+			//}
+			//acc_row.SetRegisterTime(int32(now_time.Unix()))
+			accInfo.acc_row.Set_register_time(uint32(now_time.Unix()))
+			//server.account_table.Insert(acc_row)
 		}
 	}
 
-	if acc_row.GetUniqueId() == "" {
+	//if acc_row.GetUniqueId() == "" {
+	if accInfo.acc_row.Get_unique_id() == "" {
 		uid := _generate_account_uuid(account)
 		if uid != "" {
-			acc_row.SetUniqueId(uid)
+			//acc_row.SetUniqueId(uid)
+			accInfo.acc_row.Set_unique_id(uid)
 		}
 	}
 
-	playerList := share_data.GetUidPlayerList(server.redis_conn, acc_row.GetUniqueId())
-	last_time := acc_row.GetLastGetAccountPlayerListTime()
-	if int32(now_time.Unix())-last_time >= 5*60 {
+	playerList := share_data.GetUidPlayerList(server.redis_conn /*acc_row.GetUniqueId()*/, accInfo.acc_row.Get_unique_id())
+	//last_time := acc_row.GetLastGetAccountPlayerListTime()
+	last_time := accInfo.acc_row.Get_last_get_account_player_list_time()
+	if uint32(now_time.Unix())-last_time >= 5*60 {
 		if playerList == nil {
-			log.Warn("load player(uid %v) list failed", acc_row.GetUniqueId())
+			log.Warn("load player(uid %v) list failed" /*acc_row.GetUniqueId()*/, accInfo.acc_row.Get_unique_id())
 		} else {
-			acc_row.SetLastGetAccountPlayerListTime(int32(now_time.Unix()))
+			//acc_row.SetLastGetAccountPlayerListTime(int32(now_time.Unix()))
+			accInfo.acc_row.Set_last_get_account_player_list_time(uint32(now_time.Unix()))
 		}
 	}
 
-	ban_row := dbc.BanPlayers.GetRow(acc_row.GetUniqueId())
-	if ban_row != nil && ban_row.GetStartTime() > 0 {
+	//ban_row := dbc.BanPlayers.GetRow(acc_row.GetUniqueId())
+	ban_row, err := server.ban_player_table.SelectByPrimaryField(accInfo.acc_row.Get_unique_id())
+	//if ban_row != nil && ban_row.GetStartTime() > 0 {
+	if err == nil && ban_row.Get_start_time() > 0 {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_BE_BANNED)
 		log.Error("Account %v has been banned, cant login", account)
 		return
@@ -681,10 +767,10 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 
 	// --------------------------------------------------------------------------------------------
 	// 选择默认服
-	var select_server_id int32
-	select_server_id = acc_row.GetLastSelectServerId()
+	select_server_id := accInfo.acc_row.Get_last_select_server_id() //acc_row.GetLastSelectServerId()
 	if select_server_id <= 0 {
-		select_server_id = acc_row.GetLastSelectIOSServerId()
+		//select_server_id = acc_row.GetLastSelectIOSServerId()
+		select_server_id = accInfo.acc_row.Get_last_select_ios_server_id()
 		if select_server_id <= 0 {
 			server := server_list.RandomOneServer(client_os)
 			if server == nil {
@@ -693,20 +779,28 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 				return
 			}
 			select_server_id = server.Id
-			acc_row.SetLastSelectServerId(select_server_id)
+			//acc_row.SetLastSelectServerId(select_server_id)
+			accInfo.acc_row.Set_last_select_server_id(select_server_id)
 		}
 	}
 
 	var hall_ip, token string
-	err_code, hall_ip, token = _select_server(acc_row.GetUniqueId(), account, select_server_id)
+	err_code, hall_ip, token = _select_server( /*acc_row.GetUniqueId()*/ accInfo.acc_row.Get_unique_id(), account, select_server_id)
 	if err_code < 0 {
 		return
 	}
 	// --------------------------------------------------------------------------------------------
 
-	account_login(account, token, client_os)
+	//account_login(account, token, client_os)
+	accInfo.set_state(1)
 
-	acc_row.SetToken(token)
+	accInfo.acc_row.Set_token(token)
+	if isNew {
+		server.accountMgr.Set(account, accInfo)
+		server.account_table.Insert(accInfo.acc_row)
+	} else {
+		server.account_table.UpdateAll(accInfo.acc_row)
+	}
 
 	_save_aaid(account, aaid)
 
@@ -724,7 +818,7 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 		response.Servers = make([]*msg_client_message.ServerInfo, l)
 		for i := 0; i < l; i++ {
 			response.Servers[i] = &msg_client_message.ServerInfo{
-				Id:   servers[i].Id,
+				Id:   int32(servers[i].Id),
 				Name: servers[i].Name,
 				IP:   servers[i].IP,
 			}
@@ -736,9 +830,9 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 	} else {
 		response.InfoList = playerList.GetList()
 	}
-	response.LastServerId = select_server_id
+	response.LastServerId = int32(select_server_id)
 	if channel == "guest" {
-		response.BoundAccount = acc_row.GetBindNewAccount()
+		response.BoundAccount = accInfo.acc_row.Get_bind_new_account() //acc_row.GetBindNewAccount()
 	}
 
 	resp_data, err = proto.Marshal(response)
@@ -753,7 +847,7 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 	return
 }
 
-func _select_server(unique_id, account string, server_id int32) (err_code int32, hall_ip, access_token string) {
+func _select_server(unique_id, account string, server_id uint32) (err_code int32, hall_ip, access_token string) {
 	sinfo := server_list.GetServerById(server_id)
 	if sinfo == nil {
 		err_code = int32(msg_client_message.E_ERR_PLAYER_SELECT_SERVER_NOT_FOUND)
@@ -782,50 +876,32 @@ func _select_server(unique_id, account string, server_id int32) (err_code int32,
 	return
 }
 
-func select_server_handler(account, token string, server_id int32) (err_code int32, resp_data []byte) {
-	row := dbc.Accounts.GetRow(account)
-	if row == nil {
+func select_server_handler(account, token string, server_id uint32) (err_code int32, resp_data []byte) {
+	//row := dbc.Accounts.GetRow(account)
+	row, err := server.account_table.SelectByPrimaryField(account)
+	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_NOT_REGISTERED)
 		log.Error("select_server_handler: account[%v] not register", account)
 		return
 	}
 
-	ban_row := dbc.BanPlayers.GetRow(row.GetUniqueId())
-	if ban_row != nil && ban_row.GetStartTime() > 0 {
+	//ban_row := dbc.BanPlayers.GetRow(row.GetUniqueId())
+	ban_row, err := server.ban_player_table.SelectByPrimaryField(row.Get_unique_id())
+	//if ban_row != nil && ban_row.GetStartTime() > 0 {
+	if err == nil && ban_row.Get_start_time() > 0 {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_BE_BANNED)
 		log.Error("Account %v has been banned, cant login", account)
 		return
 	}
 
-	/*acc := account_info_get(account, false)
-	if acc == nil {
-		err_code = int32(msg_client_message.E_ERR_PLAYER_NOT_EXIST)
-		log.Error("select_server_handler: player[%v] not found", account)
-		return
-	}*/
-
-	// 暂时不区分IOS或android
-	/*client_os := acc.get_client_os()
-	if !server_list.HasId(client_os, server_id) {
-		err_code = int32(msg_client_message.E_ERR_PLAYER_SELECT_SERVER_NOT_FOUND)
-		log.Error("account %v select server id %v not found in client os %v", account, server_id, client_os)
-		return
-	}*/
-
-	// 暂时不判断状态
-	/*if acc.get_state() != 1 {
-		err_code = int32(msg_client_message.E_ERR_PLAYER_ALREADY_SELECTED_SERVER)
-		log.Error("select_server_handler player[%v] already selected server", account)
-		return
-	}*/
-
-	if /*token != acc.get_token()*/ token != row.GetToken() {
+	//if token != row.GetToken() {
+	if token != row.Get_token() {
 		err_code = int32(msg_client_message.E_ERR_PLAYER_TOKEN_ERROR)
-		log.Error("select_server_handler player[%v] token[%v] invalid, need[%v]", account, token, row.GetToken())
+		log.Error("select_server_handler player[%v] token[%v] invalid, need[%v]", account, token, row.Get_token() /*row.GetToken()*/)
 		return
 	}
 
-	err_code, hall_ip, access_token := _select_server(row.GetUniqueId(), account, server_id)
+	err_code, hall_ip, access_token := _select_server( /*row.GetUniqueId()*/ row.Get_unique_id(), account, server_id)
 	if err_code < 0 {
 		return
 	}
@@ -842,7 +918,6 @@ func select_server_handler(account, token string, server_id int32) (err_code int
 		IP:    hall_ip,
 	}
 
-	var err error
 	resp_data, err = proto.Marshal(response)
 	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_INTERNAL)
@@ -850,7 +925,9 @@ func select_server_handler(account, token string, server_id int32) (err_code int
 		return
 	}
 
-	row.SetLastSelectServerId(server_id)
+	//row.SetLastSelectServerId(server_id)
+	row.Set_last_select_server_id(server_id)
+	server.account_table.UpdateAll(row)
 
 	log.Trace("Account %v selected server %v", account, server_id)
 
@@ -858,27 +935,30 @@ func select_server_handler(account, token string, server_id int32) (err_code int
 }
 
 func set_password_handler(account, password, new_password string) (err_code int32, resp_data []byte) {
-	row := dbc.Accounts.GetRow(account)
-	if row == nil {
+	//row := dbc.Accounts.GetRow(account)
+	row, err := server.account_table.SelectByPrimaryField(account)
+	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_PLAYER_NOT_EXIST)
 		log.Error("set_password_handler account[%v] not found", account)
 		return
 	}
 
-	ban_row := dbc.BanPlayers.GetRow(row.GetUniqueId())
-	if ban_row != nil && ban_row.GetStartTime() > 0 {
+	//ban_row := dbc.BanPlayers.GetRow(row.GetUniqueId())
+	ban_row, err := server.ban_player_table.SelectByPrimaryField(row.Get_unique_id())
+	if err == nil && /*ban_row.GetStartTime()*/ ban_row.Get_start_time() > 0 {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_BE_BANNED)
 		log.Error("Account %v has been banned, cant login", account)
 		return
 	}
 
-	if row.GetPassword() != password {
+	if /*row.GetPassword()*/ row.Get_password() != password {
 		err_code = int32(msg_client_message.E_ERR_ACCOUNT_PASSWORD_INVALID)
 		log.Error("set_password_handler account[%v] password is invalid", account)
 		return
 	}
 
-	row.SetPassword(new_password)
+	//row.SetPassword(new_password)
+	row.Set_password(new_password)
 
 	response := &msg_client_message.S2CSetLoginPasswordResponse{
 		Account:     account,
@@ -886,7 +966,6 @@ func set_password_handler(account, password, new_password string) (err_code int3
 		NewPassword: new_password,
 	}
 
-	var err error
 	resp_data, err = proto.Marshal(response)
 	if err != nil {
 		err_code = int32(msg_client_message.E_ERR_INTERNAL)
@@ -961,7 +1040,7 @@ func client_http_handler(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if nil != err {
 		_send_error(w, 0, -1)
 		log.Error("client_http_handler ReadAll err[%s]", err.Error())
@@ -1001,7 +1080,7 @@ func client_http_handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msg_id = int32(msg_client_message_id.MSGID_S2C_SELECT_SERVER_RESPONSE)
-		err_code, data = select_server_handler(select_msg.GetAcc(), select_msg.GetToken(), select_msg.GetServerId())
+		err_code, data = select_server_handler(select_msg.GetAcc(), select_msg.GetToken(), uint32(select_msg.GetServerId()))
 	} else if msg.MsgCode == int32(msg_client_message_id.MSGID_C2S_REGISTER_REQUEST) {
 		var register_msg msg_client_message.C2SRegisterRequest
 		err = proto.Unmarshal(msg.GetData(), &register_msg)
@@ -1031,7 +1110,7 @@ func client_http_handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msg_id = int32(msg_client_message_id.MSGID_S2C_GUEST_BIND_NEW_ACCOUNT_RESPONSE)
-		err_code, data = bind_new_account_handler(bind_msg.GetServerId(), bind_msg.GetAccount(), bind_msg.GetPassword(), bind_msg.GetNewAccount(), bind_msg.GetNewPassword(), bind_msg.GetNewChannel())
+		err_code, data = bind_new_account_handler(uint32(bind_msg.GetServerId()), bind_msg.GetAccount(), bind_msg.GetPassword(), bind_msg.GetNewAccount(), bind_msg.GetNewPassword(), bind_msg.GetNewChannel())
 	} else if msg.MsgCode == int32(msg_client_message_id.MSGID_C2S_SAVE_AAID_REQUEST) {
 		var aaid_msg msg_client_message.C2SSaveAAIDRequest
 		err = proto.Unmarshal(msg.GetData(), &aaid_msg)

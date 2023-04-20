@@ -1,14 +1,14 @@
 package utils
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"ih_server/libs/log"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -16,95 +16,79 @@ const (
 )
 
 type RedisConn struct {
-	conn      redis.Conn
-	addr      string
+	cluster   *redis.ClusterClient
+	ctx       context.Context
+	addrs     []string
 	disc      int32
 	disc_chan chan bool
-	mtx       *sync.Mutex
+	mtx       sync.Mutex
 }
 
-func (this *RedisConn) InitWithLock() {
-	this.mtx = &sync.Mutex{}
-}
-
-func (this *RedisConn) Connect(addr string) bool {
-	if this.conn != nil {
-		fmt.Printf("redis已经建立了连接\n")
+func (r *RedisConn) Connect(addrs []string) bool {
+	if r.cluster != nil {
+		fmt.Printf("redis cluster 已经建立\n")
 		return true
 	}
 
-	conn, err := redis.Dial("tcp", addr)
-	if err != nil {
-		fmt.Printf("redis连接[%v]失败[%v]\n", addr, err.Error())
-		return false
-	}
-	this.conn = conn
-	this.addr = addr
-	this.disc_chan = make(chan bool)
-	fmt.Printf("redis连接[%v]成功\n", addr)
+	conn := redis.NewClusterClient(&redis.ClusterOptions{Addrs: addrs})
+	r.ctx = context.Background()
+	r.cluster = conn
+	r.addrs = addrs
+	r.disc_chan = make(chan bool)
+	fmt.Printf("redis cluster [%v] 創建成功\n", addrs)
 	return true
 }
 
-func (this *RedisConn) Clear() {
-	if this.conn != nil {
-		this.conn.Close()
-		this.conn = nil
+func (r *RedisConn) Clear() {
+	if r.cluster != nil {
+		r.cluster.Close()
+		r.cluster = nil
 	}
 }
 
-func (this *RedisConn) reconnect() bool {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
-	}
-	conn, err := redis.Dial("tcp", this.addr)
-	if err != nil {
-		fmt.Printf("redis重连[%v]失败[%v]\n", this.addr, err.Error())
-		return false
-	}
-	this.conn = conn
-	fmt.Printf("redis重连[%v]成功\n", this.addr)
-	return true
-}
-
-func (this *RedisConn) Close() {
-	if this.conn == nil {
+func (r *RedisConn) Close() {
+	if r.cluster == nil {
 		return
 	}
-	if this.disc == 1 {
+	if r.disc == 1 {
 		return
 	}
-	atomic.StoreInt32(&this.disc, 1)
-	select {
-	case d := <-this.disc_chan:
-		{
-			for !d {
-			}
-		}
-	}
-	this.conn.Close()
-	this.conn = nil
-	if this.mtx != nil {
-		this.mtx = nil
-	}
+	atomic.StoreInt32(&r.disc, 1)
+	r.cluster.Close()
+	r.cluster = nil
 }
 
-func (this *RedisConn) Do(cmd string, args ...interface{}) (interface{}, error) {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
+func (r *RedisConn) Do(cmd string, args ...interface{}) *redis.Cmd {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if r.cluster == nil {
+		return nil
 	}
-	if this.conn == nil {
-		return nil, errors.New("未建立redis连接")
-	}
-	return this.conn.Do(cmd, args...)
+	args = append([]interface{}{cmd}, args...)
+	return r.cluster.Do(r.ctx, args...)
 }
 
-func (this *RedisConn) Post(cmd string, args ...interface{}) error {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
+func (r *RedisConn) HGetAll(key string) *redis.MapStringStringCmd {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if r.cluster == nil {
+		return nil
 	}
+	return r.cluster.HGetAll(r.ctx, key)
+}
+
+func (r *RedisConn) HExists(key, field string) *redis.BoolCmd {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if r.cluster == nil {
+		return nil
+	}
+	return r.cluster.HExists(r.ctx, key, field)
+}
+
+/*func (this *RedisConn) Post(cmd string, args ...interface{}) error {
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
 	if this.conn == nil {
 		return errors.New("未建立redis连接")
 	}
@@ -116,10 +100,8 @@ func (this *RedisConn) Post(cmd string, args ...interface{}) error {
 }
 
 func (this *RedisConn) Flush() error {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
-	}
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
 	if this.conn == nil {
 		return errors.New("未建立redis连接")
 	}
@@ -127,10 +109,8 @@ func (this *RedisConn) Flush() error {
 }
 
 func (this *RedisConn) Receive() (interface{}, error) {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
-	}
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
 	if this.conn == nil {
 		return nil, errors.New("未建立redis连接")
 	}
@@ -138,62 +118,47 @@ func (this *RedisConn) Receive() (interface{}, error) {
 }
 
 func (this *RedisConn) Send(cmd string, args ...interface{}) error {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
-	}
+	this.mtx.Lock()
+	defer this.mtx.Unlock()
 	if this.conn == nil {
 		return errors.New("未建立redis连接")
 	}
 	return this.conn.Send(cmd, args...)
-}
+}*/
 
-func (this *RedisConn) ping() error {
-	if this.mtx != nil {
-		this.mtx.Lock()
-		defer this.mtx.Unlock()
-	}
-	_, err := this.conn.Do("Ping")
-	if err != nil {
-		return err
+func (r *RedisConn) ping() error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	cmd := r.cluster.Ping(r.ctx)
+	if cmd.Err() != nil {
+		return cmd.Err()
 	}
 	return nil
 }
 
-func (this *RedisConn) Run(interval_ms int) {
+func (r *RedisConn) Run(interval_ms int) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Stack(err)
 		}
 	}()
 
-	if this.conn == nil {
+	if r.cluster == nil {
 		return
 	}
 
-	var rec bool
-
 	for {
-		if atomic.LoadInt32(&this.disc) == 1 {
-			this.disc_chan <- true
+		if atomic.LoadInt32(&r.disc) == 1 {
+			r.disc_chan <- true
 			break
 		}
 
-		if rec {
-			// 重连
-			if !this.reconnect() {
-				time.Sleep(time.Second * REDIS_CLIENT_RECONNECT_INTERVAL)
-				continue
-			}
-			rec = false
-		}
-
-		err := this.ping()
+		err := r.ping()
 		if err != nil {
-			rec = true
-			log.Info("redis连接已断开，准备重连 ...")
+			log.Info("redis cluster 斷連了")
+			time.Sleep(time.Second * 5)
+		} else {
+			time.Sleep(time.Millisecond * time.Duration(interval_ms))
 		}
-
-		time.Sleep(time.Millisecond * time.Duration(interval_ms))
 	}
 }

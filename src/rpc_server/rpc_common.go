@@ -45,7 +45,7 @@ func (proc *G2G_CommonProc) Get(arg *rpc_proto.G2G_GetRequest, result *rpc_proto
 	return err
 }
 
-func split_object_ids_with_server(object_type int32, object_ids []int32) (serverid2objects map[int32][]int32) {
+func split_object_ids_with_server(object_type int32, object_ids []int32) (serverid2objects map[uint32][]int32) {
 	if len(object_ids) == 0 {
 		return
 	}
@@ -56,7 +56,7 @@ func split_object_ids_with_server(object_type int32, object_ids []int32) (server
 
 	for i := 0; i < len(object_ids); i++ {
 		id := object_ids[i]
-		var server_id int32
+		var server_id uint32
 		if object_type == rpc_proto.OBJECT_TYPE_PLAYER || object_type == rpc_proto.OBJECT_TYPE_CROSS_PLAYER {
 			server_id = share_data.GetServerIdByPlayerId(id)
 		} else {
@@ -66,7 +66,7 @@ func split_object_ids_with_server(object_type int32, object_ids []int32) (server
 			continue
 		}
 		if serverid2objects == nil {
-			serverid2objects = make(map[int32][]int32)
+			serverid2objects = make(map[uint32][]int32)
 		}
 
 		var objects []int32 = serverid2objects[server_id]
@@ -88,7 +88,7 @@ func (proc *G2G_CommonProc) MultiGet(arg *rpc_proto.G2G_MultiGetRequest, result 
 		}
 	}()
 
-	var sid2objects map[int32][]int32 = split_object_ids_with_server(arg.ObjectType, arg.ObjectIds)
+	var sid2objects map[uint32][]int32 = split_object_ids_with_server(arg.ObjectType, arg.ObjectIds)
 	if sid2objects == nil {
 		return fmt.Errorf("!!!!!! split players result is empty from player id %v", arg.FromPlayerId)
 	}

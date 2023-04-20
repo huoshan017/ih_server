@@ -19,7 +19,7 @@ func (d *RedisGlobalData) Init() bool {
 		return false
 	}
 
-	if !d.redis_conn.Connect(config.RedisServerIP) {
+	if !d.redis_conn.Connect(config.RedisIPs) {
 		return false
 	}
 

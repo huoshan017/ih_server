@@ -2,8 +2,8 @@ package main
 
 import (
 	"ih_server/libs/log"
-	"ih_server/proto/gen_go/client_message"
-	"ih_server/proto/gen_go/client_message_id"
+	msg_client_message "ih_server/proto/gen_go/client_message"
+	msg_client_message_id "ih_server/proto/gen_go/client_message_id"
 	"ih_server/src/share_data"
 	"ih_server/src/table_config"
 	"math"
@@ -260,7 +260,7 @@ func (p *Player) add_exp(add int32) (level, exp int32) {
 		// 更新任务
 		p.TaskUpdate(table_config.TASK_COMPLETE_TYPE_REACH_LEVEL, true, level, 1)
 		share_data.SaveUidPlayerInfo(hall_server.redis_conn, p.UniqueId, &msg_client_message.AccountPlayerInfo{
-			ServerId:    config.ServerId,
+			ServerId:    int32(config.ServerId),
 			PlayerName:  p.db.GetName(),
 			PlayerLevel: level,
 			PlayerHead:  p.db.Info.GetHead(),

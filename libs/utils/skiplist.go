@@ -73,38 +73,38 @@ func NewSkiplist() *Skiplist {
 	}
 }
 
-func (this *Skiplist) Insert(v SkiplistNode) int32 {
-	if this.curr_length == 0 {
+func (sl *Skiplist) Insert(v SkiplistNode) int32 {
+	if sl.curr_length == 0 {
 		log.Debug("###[Skiplist]### first node[%v]", v)
 	}
 
-	node := this.head
-	for i := this.curr_layer - 1; i >= 0; i-- {
-		if i == this.curr_layer-1 {
-			this.rank[i] = 0
+	node := sl.head
+	for i := sl.curr_layer - 1; i >= 0; i-- {
+		if i == sl.curr_layer-1 {
+			sl.rank[i] = 0
 		} else {
-			this.rank[i] = this.rank[i+1]
+			sl.rank[i] = sl.rank[i+1]
 		}
 		for node.layers[i].next != nil && node.layers[i].next.value.Greater(v) {
-			this.rank[i] += node.layers[i].span
+			sl.rank[i] += node.layers[i].span
 			node = node.layers[i].next
 		}
-		this.before_node[i] = node
+		sl.before_node[i] = node
 	}
 
 	new_layer := random_skiplist_layer()
-	if new_layer > this.curr_layer {
-		for i := this.curr_layer; i < new_layer; i++ {
-			this.rank[i] = 0
-			this.before_node[i] = this.head
-			this.before_node[i].layers[i].span = this.curr_length
+	if new_layer > sl.curr_layer {
+		for i := sl.curr_layer; i < new_layer; i++ {
+			sl.rank[i] = 0
+			sl.before_node[i] = sl.head
+			sl.before_node[i].layers[i].span = sl.curr_length
 		}
-		this.curr_layer = new_layer
+		sl.curr_layer = new_layer
 	}
 
 	new_node := new_skiplist_node(new_layer, v)
 	for i := int32(0); i < new_layer; i++ {
-		node = this.before_node[i]
+		node = sl.before_node[i]
 		new_node.layers[i].next = node.layers[i].next
 		new_node.layers[i].prev = node
 		if node.layers[i].next != nil {
@@ -112,31 +112,31 @@ func (this *Skiplist) Insert(v SkiplistNode) int32 {
 		}
 		node.layers[i].next = new_node
 
-		new_node.layers[i].span = this.before_node[i].layers[i].span - (this.rank[0] - this.rank[i])
-		this.before_node[i].layers[i].span = (this.rank[0] - this.rank[i]) + 1
+		new_node.layers[i].span = sl.before_node[i].layers[i].span - (sl.rank[0] - sl.rank[i])
+		sl.before_node[i].layers[i].span = (sl.rank[0] - sl.rank[i]) + 1
 	}
 
-	for i := new_layer; i < this.curr_layer; i++ {
-		this.before_node[i].layers[i].span += 1
+	for i := new_layer; i < sl.curr_layer; i++ {
+		sl.before_node[i].layers[i].span += 1
 	}
 
 	if new_node.layers[0].next == nil {
-		this.tail = new_node
+		sl.tail = new_node
 	}
 
-	this.lengths_num[new_layer-1] += 1
-	this.curr_length += 1
+	sl.lengths_num[new_layer-1] += 1
+	sl.curr_length += 1
 
 	return new_layer
 }
 
-func (this *Skiplist) GetNode(v SkiplistNode) (node *skiplist_node) {
-	n := this.head
-	for i := this.curr_layer - 1; i >= 0; i-- {
+func (sl *Skiplist) GetNode(v SkiplistNode) (node *skiplist_node) {
+	n := sl.head
+	for i := sl.curr_layer - 1; i >= 0; i-- {
 		for n.layers[i].next != nil && n.layers[i].next.value.Greater(v) {
 			n = n.layers[i].next
 		}
-		this.before_node[i] = n
+		sl.before_node[i] = n
 	}
 	if n.layers[0].next != nil && n.layers[0].next.value.KeyEqual(v) {
 		node = n.layers[0].next
@@ -144,10 +144,10 @@ func (this *Skiplist) GetNode(v SkiplistNode) (node *skiplist_node) {
 	return
 }
 
-func (this *Skiplist) GetNodeByRank(rank int32) (node *skiplist_node) {
-	n := this.head
+func (sl *Skiplist) GetNodeByRank(rank int32) (node *skiplist_node) {
+	n := sl.head
 	curr_rank := int32(0)
-	for i := this.curr_layer - 1; i >= 0; i-- {
+	for i := sl.curr_layer - 1; i >= 0; i-- {
 		for n.layers[i].next != nil && (curr_rank+n.layers[i].span) <= rank {
 			curr_rank += n.layers[i].span
 			n = n.layers[i].next
@@ -160,17 +160,17 @@ func (this *Skiplist) GetNodeByRank(rank int32) (node *skiplist_node) {
 	return
 }
 
-func (this *Skiplist) GetByRank(rank int32) (v SkiplistNode) {
-	node := this.GetNodeByRank(rank)
+func (sl *Skiplist) GetByRank(rank int32) (v SkiplistNode) {
+	node := sl.GetNodeByRank(rank)
 	if node == nil {
 		return nil
 	}
 	return node.value
 }
 
-func (this *Skiplist) GetRank(v SkiplistNode) (rank int32) {
-	node := this.head
-	for i := this.curr_layer - 1; i >= 0; i-- {
+func (sl *Skiplist) GetRank(v SkiplistNode) (rank int32) {
+	node := sl.head
+	for i := sl.curr_layer - 1; i >= 0; i-- {
 		for node.layers[i].next != nil && node.layers[i].next.value.Greater(v) {
 			rank += node.layers[i].span
 			node = node.layers[i].next
@@ -183,8 +183,8 @@ func (this *Skiplist) GetRank(v SkiplistNode) (rank int32) {
 	return 0
 }
 
-func (this *Skiplist) GetByRankRange(rank_start, rank_num int32, values []SkiplistNode) bool {
-	node := this.GetNodeByRank(rank_start)
+func (sl *Skiplist) GetByRankRange(rank_start, rank_num int32, values []SkiplistNode) bool {
+	node := sl.GetNodeByRank(rank_start)
 	if node == nil || rank_num <= 0 || values == nil {
 		return false
 	}
@@ -204,8 +204,8 @@ func (this *Skiplist) GetByRankRange(rank_start, rank_num int32, values []Skipli
 	return true
 }
 
-func (this *Skiplist) DeleteNode(node *skiplist_node) {
-	for n := int32(0); n < this.curr_layer; n++ {
+func (sl *Skiplist) DeleteNode(node *skiplist_node) {
+	for n := int32(0); n < sl.curr_layer; n++ {
 		if len(node.layers) > int(n) {
 			if node.layers[n].prev != nil {
 				node.layers[n].prev.layers[n].next = node.layers[n].next
@@ -215,59 +215,59 @@ func (this *Skiplist) DeleteNode(node *skiplist_node) {
 				node.layers[n].next.layers[n].prev = node.layers[n].prev
 			}
 		} else {
-			this.before_node[n].layers[n].span -= 1
+			sl.before_node[n].layers[n].span -= 1
 		}
 	}
 
-	if this.tail == node && node != nil {
-		this.tail = node.layers[0].prev
+	if sl.tail == node && node != nil {
+		sl.tail = node.layers[0].prev
 	}
 
 	// 更新当前最大层数
-	if this.curr_layer > 1 && this.head.layers[this.curr_layer-1].next == nil {
-		this.curr_layer -= 1
+	if sl.curr_layer > 1 && sl.head.layers[sl.curr_layer-1].next == nil {
+		sl.curr_layer -= 1
 	}
 
-	if this.lengths_num[len(node.layers)-1] > 0 {
-		this.lengths_num[len(node.layers)-1] -= 1
+	if sl.lengths_num[len(node.layers)-1] > 0 {
+		sl.lengths_num[len(node.layers)-1] -= 1
 	}
-	if this.curr_length > 0 {
-		this.curr_length -= 1
+	if sl.curr_length > 0 {
+		sl.curr_length -= 1
 	}
 }
 
-func (this *Skiplist) Delete(v SkiplistNode) bool {
-	if this.curr_length == 0 {
+func (sl *Skiplist) Delete(v SkiplistNode) bool {
+	if sl.curr_length == 0 {
 		return false
 	}
 
-	node := this.GetNode(v)
+	node := sl.GetNode(v)
 	if node == nil {
 		log.Error("###[Skiplist]### get node %v failed", v)
 		return false
 	}
 
-	this.DeleteNode(node)
+	sl.DeleteNode(node)
 
 	return true
 }
 
-func (this *Skiplist) DeleteByRank(rank int32) bool {
-	if this.curr_length == 0 {
+func (sl *Skiplist) DeleteByRank(rank int32) bool {
+	if sl.curr_length == 0 {
 		return false
 	}
-	node := this.GetNodeByRank(rank)
+	node := sl.GetNodeByRank(rank)
 	if node == nil {
 		log.Error("###[Skiplist]### get node by rank[%v] failed", rank)
 		return false
 	}
 
-	this.DeleteNode(node)
+	sl.DeleteNode(node)
 	return true
 }
 
-func (this *Skiplist) PullList() (nodes []SkiplistNode) {
-	node := this.head
+func (sl *Skiplist) PullList() (nodes []SkiplistNode) {
+	node := sl.head
 	for node.layers[0].next != nil {
 		nodes = append(nodes, node.layers[0].next.value)
 		node = node.layers[0].next
@@ -275,64 +275,55 @@ func (this *Skiplist) PullList() (nodes []SkiplistNode) {
 	return
 }
 
-func (this *Skiplist) GetLength() int32 {
-	return this.curr_length
+func (sl *Skiplist) GetLength() int32 {
+	return sl.curr_length
 }
 
-func (this *Skiplist) GetLayer() int32 {
-	return this.curr_layer
+func (sl *Skiplist) GetLayer() int32 {
+	return sl.curr_layer
 }
 
-func (this *Skiplist) GetLayerLength(layer int32) int32 {
-	if layer < 1 || layer > this.curr_layer {
+func (sl *Skiplist) GetLayerLength(layer int32) int32 {
+	if layer < 1 || layer > sl.curr_layer {
 		return -1
 	}
-	return this.lengths_num[layer-1]
+	return sl.lengths_num[layer-1]
 }
 
 type Int32Value int32
 
-func (this Int32Value) Less(id interface{}) bool {
-	if this < id.(Int32Value) {
-		return true
-	}
-	return false
+func (sl Int32Value) Less(id interface{}) bool {
+	return sl < id.(Int32Value)
 }
 
-func (this Int32Value) Greater(id interface{}) bool {
-	if this > id.(Int32Value) {
-		return true
-	}
-	return false
+func (sl Int32Value) Greater(id interface{}) bool {
+	return sl > id.(Int32Value)
 }
 
-func (this Int32Value) KeyEqual(id interface{}) bool {
-	if this == id {
-		return true
-	}
-	return false
+func (sl Int32Value) KeyEqual(id interface{}) bool {
+	return sl == id
 }
 
-func (this Int32Value) GetKey() interface{} {
-	return this
+func (sl Int32Value) GetKey() interface{} {
+	return sl
 }
 
-func (this Int32Value) GetValue() interface{} {
-	return this
+func (sl Int32Value) GetValue() interface{} {
+	return sl
 }
 
-func (this Int32Value) SetValue(value interface{}) {
+func (sl Int32Value) SetValue(value interface{}) {
 
 }
 
-func (this Int32Value) New() SkiplistNode {
-	return this
+func (sl Int32Value) New() SkiplistNode {
+	return sl
 }
 
-func (this Int32Value) Assign(node SkiplistNode) {
+func (sl Int32Value) Assign(node SkiplistNode) {
 }
 
-func (this Int32Value) CopyDataTo(node interface{}) {
+func (sl Int32Value) CopyDataTo(node interface{}) {
 
 }
 
@@ -342,20 +333,20 @@ type PlayerInfo struct {
 	PlayerScore int32
 }
 
-func (this *PlayerInfo) Less(info interface{}) bool {
+func (sl *PlayerInfo) Less(info interface{}) bool {
 	item := info.(*PlayerInfo)
 	if item == nil {
 		return false
 	}
-	if this.PlayerScore < item.PlayerScore {
+	if sl.PlayerScore < item.PlayerScore {
 		return true
 	}
-	if this.PlayerScore == item.PlayerScore {
-		if this.PlayerLevel < item.PlayerLevel {
+	if sl.PlayerScore == item.PlayerScore {
+		if sl.PlayerLevel < item.PlayerLevel {
 			return true
 		}
-		if this.PlayerLevel == item.PlayerLevel {
-			if this.PlayerId < item.PlayerId {
+		if sl.PlayerLevel == item.PlayerLevel {
+			if sl.PlayerId < item.PlayerId {
 				return true
 			}
 		}
@@ -363,20 +354,20 @@ func (this *PlayerInfo) Less(info interface{}) bool {
 	return false
 }
 
-func (this *PlayerInfo) Greater(info interface{}) bool {
+func (sl *PlayerInfo) Greater(info interface{}) bool {
 	item := info.(*PlayerInfo)
 	if item == nil {
 		return false
 	}
-	if this.PlayerScore > item.PlayerScore {
+	if sl.PlayerScore > item.PlayerScore {
 		return true
 	}
-	if this.PlayerScore == item.PlayerScore {
-		if this.PlayerLevel > item.PlayerLevel {
+	if sl.PlayerScore == item.PlayerScore {
+		if sl.PlayerLevel > item.PlayerLevel {
 			return true
 		}
-		if this.PlayerLevel == item.PlayerLevel {
-			if this.PlayerId > item.PlayerId {
+		if sl.PlayerLevel == item.PlayerLevel {
+			if sl.PlayerId > item.PlayerId {
 				return true
 			}
 		}
@@ -384,44 +375,44 @@ func (this *PlayerInfo) Greater(info interface{}) bool {
 	return false
 }
 
-func (this *PlayerInfo) KeyEqual(info interface{}) bool {
+func (sl *PlayerInfo) KeyEqual(info interface{}) bool {
 	item := info.(*PlayerInfo)
 	if item == nil {
 		return false
 	}
-	if this.PlayerId == item.PlayerId {
+	if sl.PlayerId == item.PlayerId {
 		return true
 	}
 	return false
 }
 
-func (this *PlayerInfo) GetKey() interface{} {
-	return this.PlayerId
+func (sl *PlayerInfo) GetKey() interface{} {
+	return sl.PlayerId
 }
 
-func (this *PlayerInfo) GetValue() interface{} {
-	return this.PlayerId
+func (sl *PlayerInfo) GetValue() interface{} {
+	return sl.PlayerId
 }
 
-func (this *PlayerInfo) SetValue(value interface{}) {
+func (sl *PlayerInfo) SetValue(value interface{}) {
 
 }
 
-func (this *PlayerInfo) New() SkiplistNode {
+func (sl *PlayerInfo) New() SkiplistNode {
 	return &PlayerInfo{}
 }
 
-func (this *PlayerInfo) Assign(node SkiplistNode) {
+func (sl *PlayerInfo) Assign(node SkiplistNode) {
 	n := node.(*PlayerInfo)
 	if n == nil {
 		return
 	}
-	this.PlayerId = n.PlayerId
-	this.PlayerLevel = n.PlayerLevel
-	this.PlayerScore = n.PlayerScore
+	sl.PlayerId = n.PlayerId
+	sl.PlayerLevel = n.PlayerLevel
+	sl.PlayerScore = n.PlayerScore
 }
 
-func (this *PlayerInfo) CopyDataTo(node interface{}) {
+func (sl *PlayerInfo) CopyDataTo(node interface{}) {
 
 }
 
@@ -429,10 +420,10 @@ func SkiplistTest(node_count int32) {
 	sp := NewSkiplist()
 
 	now_time := time.Now()
-	rand.Seed(now_time.Unix() + now_time.UnixNano())
+	r := rand.New(rand.NewSource(now_time.Unix() + now_time.UnixNano()))
 	player_ids := make([]Int32Value, node_count)
 	for i := 0; i < len(player_ids); i++ {
-		n := Int32Value(rand.Int31n(1000000))
+		n := Int32Value(r.Int31n(1000000))
 		sp.Insert(n)
 	}
 	end_time := time.Now()
@@ -455,10 +446,11 @@ func SkiplistTest(node_count int32) {
 
 func SkiplistTest2(node_count int32) {
 	var player_infos []*PlayerInfo
-	rand.Seed(time.Now().Unix())
+	source := rand.NewSource(time.Now().Unix())
+	r := rand.New(source)
 
 	for i := int32(1); i <= node_count; i++ {
-		s := rand.Int31n(100000)
+		s := r.Int31n(100000)
 		d := &PlayerInfo{
 			PlayerId:    i,
 			PlayerLevel: i,
@@ -477,8 +469,6 @@ func SkiplistTest2(node_count int32) {
 		n := sp.GetNode(v)
 		if n == nil {
 			log.Warn("@@@@@ node[%v] layer[%v] not found", v, arr[i])
-		} else {
-			//log.Debug("###[Skiplist]### node: %v", *v)
 		}
 	}
 
@@ -502,8 +492,8 @@ func SkiplistTest2(node_count int32) {
 
 	sn := make([]SkiplistNode, 20)
 	for i := int32(0); i < node_count; i++ {
-		r := rand.Int31n(node_count)
-		s := player_infos[r]
+		rr := r.Int31n(node_count)
+		s := player_infos[rr]
 		if !sp.Delete(s) {
 			log.Warn("###[Skiplist]### sp delete node[%v] failed", *s)
 		}
@@ -520,7 +510,7 @@ func SkiplistTest2(node_count int32) {
 			}
 		}*/
 
-		s.PlayerScore = rand.Int31n(100000)
+		s.PlayerScore = r.Int31n(100000)
 		sp.Insert(s)
 
 		/*log.Debug("###[Skiplist]### after insert node[%v], nodes:", *s)

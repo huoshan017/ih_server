@@ -108,7 +108,7 @@ func (c *LoginConnection) OnConnect(s *server_conn.ServerConn) {
 	log.Trace("Server[%v][%v] on LoginServer connect", config.ServerId, config.ServerName)
 	s.T = c.serverid
 	notify := &msg_server_message.H2LHallServerRegister{}
-	notify.ServerId = config.ServerId
+	notify.ServerId = int32(config.ServerId)
 	notify.ServerName = config.ServerName
 	notify.ListenClientIP = config.ListenClientOutIP
 	s.Send(uint16(msg_server_message.MSGID_H2L_HALL_SERVER_REGISTER), notify, true)

@@ -8,7 +8,6 @@ import (
 	msg_client_message "ih_server/proto/gen_go/client_message"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/gomodule/redigo/redis"
 )
 
 const (
@@ -43,11 +42,11 @@ func (pl *PlayerList) Insert(player *msg_client_message.AccountPlayerInfo) {
 	pl.player_list = append(pl.player_list, player)
 }
 
-func (pl *PlayerList) GetInfo(serverId int32) *msg_client_message.AccountPlayerInfo {
+func (pl *PlayerList) GetInfo(serverId uint32) *msg_client_message.AccountPlayerInfo {
 	pl.player_list_locker.RLock()
 	defer pl.player_list_locker.RUnlock()
 	for i := 0; i < len(pl.player_list); i++ {
-		if pl.player_list[i].GetServerId() == serverId {
+		if pl.player_list[i].GetServerId() == int32(serverId) {
 			return pl.player_list[i]
 		}
 	}
@@ -79,14 +78,13 @@ var player_list_map sync.Map
 }*/
 
 func loadFromRedis(redis_conn *utils.RedisConn, uid string) []*msg_client_message.AccountPlayerInfo {
-	data, err := redis.Bytes(redis_conn.Do("HGET", UID_PLAYER_LIST_KEY, uid))
-	if err != nil {
-		log.Error("redis get hashset %v with key %v err %v", UID_PLAYER_LIST_KEY, uid, err.Error())
+	cmd := redis_conn.Do("HGET", UID_PLAYER_LIST_KEY, uid)
+	if cmd.Err() != nil {
+		log.Error("redis get hashset %v with key %v err %v", UID_PLAYER_LIST_KEY, uid, cmd.Err())
 		return nil
 	}
-
 	var msg msg_client_message.S2CAccountPlayerListResponse
-	err = proto.Unmarshal(data, &msg)
+	err := proto.Unmarshal([]byte(cmd.String()), &msg)
 	if err != nil {
 		log.Error("uid %v S2CAccountPlayerListResponse data unmarshal err %v", uid, err.Error())
 		return nil
@@ -125,14 +123,14 @@ func SaveUidPlayerInfo(redis_conn *utils.RedisConn, uid string, info *msg_client
 		log.Error("redis marshal account %v info err %v", uid, err.Error())
 		return
 	}
-	err = redis_conn.Post("HSET", UID_PLAYER_LIST_KEY, uid, data)
-	if err != nil {
-		log.Error("redis set hashset %v key %v data %v err %v", UID_PLAYER_LIST_KEY, uid, data, err.Error())
+	cmd := redis_conn.Do("HSET", UID_PLAYER_LIST_KEY, uid, data)
+	if cmd.Err() != nil {
+		log.Error("redis set hashset %v key %v data %v err %v", UID_PLAYER_LIST_KEY, uid, data, cmd.Err())
 		return
 	}
 }
 
-func GetUidPlayer(redis_conn *utils.RedisConn, uid string, server_id int32) *msg_client_message.AccountPlayerInfo {
+func GetUidPlayer(redis_conn *utils.RedisConn, uid string, server_id uint32) *msg_client_message.AccountPlayerInfo {
 	player_list := GetUidPlayerList(redis_conn, uid)
 	if player_list == nil {
 		return nil

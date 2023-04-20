@@ -16,8 +16,6 @@ import (
 	"time"
 
 	msg_client_message "ih_server/proto/gen_go/client_message"
-
-	"github.com/gomodule/redigo/redis"
 )
 
 const (
@@ -48,9 +46,9 @@ func google_pay_save(order_id, bundle_id, account string, player *Player) {
 		log.Error("##### Serialize RedisPayInfo[%v] error[%v]", pay, err.Error())
 		return
 	}
-	err = hall_server.redis_conn.Post("HSET", GOOGLE_PAY_REDIS_KEY, order_id, string(bytes))
-	if err != nil {
-		log.Error("redis设置集合[%v]数据失败[%v]", GOOGLE_PAY_REDIS_KEY, err.Error())
+	cmd := hall_server.redis_conn.Do("HSET", GOOGLE_PAY_REDIS_KEY, order_id, string(bytes))
+	if cmd.Err() != nil {
+		log.Error("redis设置集合[%v]数据失败[%v]", GOOGLE_PAY_REDIS_KEY, cmd.Err())
 		return
 	}
 
@@ -60,15 +58,13 @@ func google_pay_save(order_id, bundle_id, account string, player *Player) {
 }
 
 func check_google_order_exist(order_id string) bool {
-	exist, err := redis.Int(hall_server.redis_conn.Do("HEXISTS", GOOGLE_PAY_REDIS_KEY, order_id))
+	exist := hall_server.redis_conn.HExists(GOOGLE_PAY_REDIS_KEY, order_id)
+	result, err := exist.Result()
 	if err != nil {
-		log.Error("redis do err %v", err.Error())
+		log.Error("redis do err %v", exist.Err())
 		return false
 	}
-	if exist <= 0 {
-		return false
-	}
-	return true
+	return result
 }
 
 func apple_pay_save(order_id, bundle_id, account string, player *Player) {
@@ -84,9 +80,9 @@ func apple_pay_save(order_id, bundle_id, account string, player *Player) {
 		log.Error("##### Serialize RedisPayInfo[%v] error[%v]", pay, err.Error())
 		return
 	}
-	err = hall_server.redis_conn.Post("HSET", APPLE_PAY_REDIS_KEY, order_id, string(bytes))
-	if err != nil {
-		log.Error("redis设置集合[%v]数据失败[%v]", APPLE_PAY_REDIS_KEY, err.Error())
+	cmd := hall_server.redis_conn.Do("HSET", APPLE_PAY_REDIS_KEY, order_id, string(bytes))
+	if cmd.Err() != nil {
+		log.Error("redis设置集合[%v]数据失败[%v]", APPLE_PAY_REDIS_KEY, cmd.Err())
 		return
 	}
 
@@ -96,15 +92,13 @@ func apple_pay_save(order_id, bundle_id, account string, player *Player) {
 }
 
 func check_apple_order_exist(order_id string) bool {
-	exist, err := redis.Int(hall_server.redis_conn.Do("HEXISTS", APPLE_PAY_REDIS_KEY, order_id))
+	result := hall_server.redis_conn.HExists(APPLE_PAY_REDIS_KEY, order_id)
+	exist, err := result.Result()
 	if err != nil {
-		log.Error("redis do err %v", err.Error())
+		log.Error("redis do err %v", err)
 		return false
 	}
-	if exist <= 0 {
-		return false
-	}
-	return true
+	return exist
 }
 
 type GooglePurchaseInfo struct {

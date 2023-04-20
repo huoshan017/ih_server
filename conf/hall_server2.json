@@ -13,7 +13,7 @@
 	"RecvMaxMSec":3000000,
 	"SendMaxMSec":3000000,
 	
-	"RedisServerIP":"127.0.0.1:6279",
+	"RedisIPs":["127.0.0.1:6279","127.0.0.1:6230"],
 	
 	"MYSQL_NAME":"ih_hall_server_2",
 	"MYSQL_IP":"127.0.0.1:3306",

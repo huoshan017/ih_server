@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"ih_server/libs/log"
 	"ih_server/libs/rpc"
-	"ih_server/proto/gen_go/client_message"
+	msg_client_message "ih_server/proto/gen_go/client_message"
 	"ih_server/src/rpc_proto"
 )
 
@@ -196,9 +196,9 @@ func gm_online_player_num(id int32, data []byte) (int32, []byte) {
 		return -1, nil
 	}
 
-	var server_ids []int32
+	var server_ids []uint32
 	if args.ServerId > 0 {
-		server_ids = []int32{args.ServerId}
+		server_ids = []uint32{args.ServerId}
 	} else {
 		ss := server_list.Servers
 		for i := 0; i < len(ss); i++ {
@@ -206,7 +206,7 @@ func gm_online_player_num(id int32, data []byte) (int32, []byte) {
 		}
 	}
 
-	var player_num []int32
+	var player_num []uint32
 	var result rpc_proto.GmOnlinePlayerNumResponse
 	for i := 0; i < len(server_ids); i++ {
 		sid := server_ids[i]
@@ -214,7 +214,7 @@ func gm_online_player_num(id int32, data []byte) (int32, []byte) {
 
 		rpc_client := GetRpcClientByServerId(sid)
 		if rpc_client == nil {
-			player_num = append(player_num, []int32{-1, -1, -1}...)
+			player_num = append(player_num, []uint32{0, 0, 0}...)
 			log.Error("gm get rpc client by server id %v failed", sid)
 			continue
 		}
@@ -222,7 +222,7 @@ func gm_online_player_num(id int32, data []byte) (int32, []byte) {
 		args.ServerId = sid
 		err = rpc_client.Call("G2H_Proc.OnlinePlayerNum", &args, &result)
 		if err != nil {
-			player_num = append(player_num, []int32{-1, -1, -1}...)
+			player_num = append(player_num, []uint32{0, 0, 0}...)
 			log.Error("gm rpc call G2H_Proc.OnlinePlayerNum err %v", err.Error())
 			continue
 		}

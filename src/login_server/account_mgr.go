@@ -1,21 +1,19 @@
 package main
 
 import (
+	"ih_server/src/login_db"
 	"sync"
 )
 
 type AccountInfo struct {
-	account   string
-	token     string
-	state     int32 // 0 未登录   1 已登陆   2 已进入游戏
-	client_os string
-	locker    *sync.RWMutex
+	acc_row *login_db.Account
+	state   int32 // 0 未登录   1 已登陆   2 已进入游戏
+	//client_os string
+	locker sync.RWMutex
 }
 
-func (ai *AccountInfo) set_token(token string) {
-	ai.locker.Lock()
-	defer ai.locker.Unlock()
-	ai.token = token
+func newAccountInfo() *AccountInfo {
+	return &AccountInfo{}
 }
 
 func (ai *AccountInfo) set_state(state int32) {
@@ -24,13 +22,7 @@ func (ai *AccountInfo) set_state(state int32) {
 	ai.state = state
 }
 
-func (ai *AccountInfo) set_client_os(client_os string) {
-	ai.locker.Lock()
-	defer ai.locker.Unlock()
-	ai.client_os = client_os
-}
-
-var account_mgr map[string]*AccountInfo
+/*var account_mgr map[string]*AccountInfo
 var account_locker *sync.RWMutex
 
 func account_mgr_init() {
@@ -50,7 +42,6 @@ func account_info_get(account string, first_create bool) *AccountInfo {
 		if account_info == nil {
 			account_info = &AccountInfo{
 				account: account,
-				locker:  &sync.RWMutex{},
 			}
 			account_mgr[account] = account_info
 		}
@@ -76,4 +67,4 @@ func account_logout(acc string) {
 		return
 	}
 	account_info.set_state(0)
-}
+}*/

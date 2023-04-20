@@ -21,7 +21,7 @@ type HallAgent struct {
 	conn             *server_conn.ServerConn // 连接
 	state            int32                   // agent状态
 	name             string                  // game_server name
-	id               int32                   // game_server ID
+	id               uint32                  // game_server ID
 	max_player_num   int32                   // 最大在线人数
 	curr_player_num  int32                   // 当前在线人数
 	aids             map[string]int32        // 已有的账号
@@ -115,7 +115,7 @@ func (agent *HallAgent) Close(force bool) {
 
 type HallAgentManager struct {
 	net                *server_conn.Node
-	id2agents          map[int32]*HallAgent
+	id2agents          map[uint32]*HallAgent
 	conn2agents        map[*server_conn.ServerConn]*HallAgent
 	agents_lock        *sync.RWMutex
 	inited             bool
@@ -128,7 +128,7 @@ type HallAgentManager struct {
 var hall_agent_manager HallAgentManager
 
 func (mgr *HallAgentManager) Init() (ok bool) {
-	mgr.id2agents = make(map[int32]*HallAgent)
+	mgr.id2agents = make(map[uint32]*HallAgent)
 	mgr.conn2agents = make(map[*server_conn.ServerConn]*HallAgent)
 	mgr.agents_lock = &sync.RWMutex{}
 	mgr.net = server_conn.NewNode(mgr, 0, 0, 5000,
@@ -242,7 +242,7 @@ func (mgr *HallAgentManager) set_ih(type_id uint16, h server_conn.Handler) {
 	mgr.net.SetHandler(type_id, h)
 }
 
-func (mgr *HallAgentManager) HasAgent(server_id int32) (ok bool) {
+func (mgr *HallAgentManager) HasAgent(server_id uint32) (ok bool) {
 	mgr.agents_lock.RLock()
 	defer mgr.agents_lock.RUnlock()
 	_, o := mgr.id2agents[server_id]
@@ -264,7 +264,7 @@ func (mgr *HallAgentManager) GetAgent(c *server_conn.ServerConn) (agent *HallAge
 	return
 }
 
-func (mgr *HallAgentManager) GetAgentByID(hall_id int32) (agent *HallAgent) {
+func (mgr *HallAgentManager) GetAgentByID(hall_id uint32) (agent *HallAgent) {
 	mgr.agents_lock.RLock()
 	defer mgr.agents_lock.RUnlock()
 	a, o := mgr.id2agents[hall_id]
@@ -289,7 +289,7 @@ func (mgr *HallAgentManager) AddAgent(c *server_conn.ServerConn, state int32) (a
 	return
 }
 
-func (mgr *HallAgentManager) SetAgentByID(id int32, agent *HallAgent) (ok bool) {
+func (mgr *HallAgentManager) SetAgentByID(id uint32, agent *HallAgent) (ok bool) {
 	mgr.agents_lock.Lock()
 	defer mgr.agents_lock.Unlock()
 
@@ -337,7 +337,7 @@ func (mgr *HallAgentManager) SetMessageHandler(type_id uint16, h server_conn.Han
 	mgr.set_ih(type_id, h)
 }
 
-func (mgr *HallAgentManager) UpdatePlayersNum(server_id int32, max_num, curr_num int32) {
+func (mgr *HallAgentManager) UpdatePlayersNum(server_id uint32, max_num, curr_num int32) {
 	mgr.agents_lock.RLock()
 	defer mgr.agents_lock.RUnlock()
 
@@ -349,7 +349,7 @@ func (mgr *HallAgentManager) UpdatePlayersNum(server_id int32, max_num, curr_num
 	agent.UpdatePlayersNum(max_num, curr_num)
 }
 
-func (mgr *HallAgentManager) GetPlayersNum(server_id int32) (agent *HallAgent, max_num, curr_num int32) {
+func (mgr *HallAgentManager) GetPlayersNum(server_id uint32) (agent *HallAgent, max_num, curr_num int32) {
 	mgr.agents_lock.RLock()
 	defer mgr.agents_lock.RUnlock()
 
@@ -404,7 +404,7 @@ func H2LHallServerRegisterHandler(conn *server_conn.ServerConn, m proto.Message)
 		return
 	}
 
-	server_id := req.GetServerId()
+	server_id := uint32(req.GetServerId())
 	server_name := req.GetServerName()
 
 	a := hall_agent_manager.GetAgent(conn)
@@ -436,7 +436,11 @@ func H2LAccountLogoutNotifyHandler(conn *server_conn.ServerConn, m proto.Message
 		return
 	}
 
-	account_logout(req.GetAccount())
+	//account_logout(req.GetAccount())
+	accInfo, o := server.accountMgr.Get(req.GetAccount())
+	if o {
+		accInfo.set_state(0)
+	}
 
 	log.Trace("Account %v log out notify", req.GetAccount())
 }
@@ -450,22 +454,33 @@ func H2LAccountBanHandler(conn *server_conn.ServerConn, m proto.Message) {
 
 	uid := req.GetUniqueId()
 	ban := req.GetBanOrFree()
-	row := dbc.BanPlayers.GetRow(uid)
+	//row := dbc.BanPlayers.GetRow(uid)
+	row, err := server.ban_player_table.SelectByPrimaryField(uid)
 	if ban > 0 {
-		if row == nil {
-			row = dbc.BanPlayers.AddRow(uid)
+		//if row == nil {
+		if err != nil {
+			//row = dbc.BanPlayers.AddRow(uid)
+			row = server.ban_player_table.NewRecord(uid)
 		}
-		row.SetAccount(req.GetAccount())
-		row.SetPlayerId(req.GetPlayerId())
+		//row.SetAccount(req.GetAccount())
+		row.Set_account(req.GetAccount())
+		//row.SetPlayerId(req.GetPlayerId())
+		row.Set_player_id(uint32(req.GetPlayerId()))
 		now_time := time.Now()
-		row.SetStartTime(int32(now_time.Unix()))
-		row.SetStartTimeStr(now_time.Format("2006-01-02 15:04:05"))
+		//row.SetStartTime(int32(now_time.Unix()))
+		row.Set_start_time(uint32(now_time.Unix()))
+		//row.SetStartTimeStr(now_time.Format("2006-01-02 15:04:05"))
+		row.Set_start_time_str(now_time.Format("2006-01-02 15:04:05"))
 	} else {
 		if row != nil {
-			row.SetStartTime(0)
-			row.SetStartTimeStr("")
+			//row.SetStartTime(0)
+			row.Set_start_time(0)
+			//row.SetStartTimeStr("")
+			row.Set_start_time_str("")
 		}
 	}
+
+	server.ban_player_table.UpdateAll(row)
 
 	log.Trace("Unique id %v ban %v", uid, ban)
 }

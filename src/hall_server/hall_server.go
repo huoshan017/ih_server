@@ -35,7 +35,7 @@ func (h *HallServer) Init() (ok bool) {
 	h.net = socket.NewNode(&hall_server, time.Duration(config.RecvMaxMSec), time.Duration(config.SendMaxMSec), 5000, nil) //(h, 0, 0, 5000, 0, 0, 0, 0, 0)
 
 	h.redis_conn = &utils.RedisConn{}
-	if !h.redis_conn.Connect(config.RedisServerIP) {
+	if !h.redis_conn.Connect(config.RedisIPs) {
 		return
 	}
 

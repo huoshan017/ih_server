@@ -9,7 +9,7 @@
 	"LogConfigFile":"login_server_tracer.json",
 	
 	"CenterServerIP":"127.0.0.1:30000",
-	"RedisServerIP" : "127.0.0.1:6279",
+	"RedisIPs" : ["127.0.0.1:6279"],
 	
 	"VerifyAccount": false,
 	"VERIFY_EXPIRATION": 600,

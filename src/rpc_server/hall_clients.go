@@ -7,13 +7,13 @@ import (
 )
 
 type HallRpcClient struct {
-	server_id  int32
+	server_id  uint32
 	server_ip  string
 	rpc_client *rpc.Client
 }
 
 // 通过ServerId对应rpc客户端
-func GetRpcClientByServerId(server_id int32) *rpc.Client {
+func GetRpcClientByServerId(server_id uint32) *rpc.Client {
 	server_info := server_list.GetServerById(server_id)
 	if server_info == nil {
 		log.Error("get server info by server_id[%v] from failed", server_id)
