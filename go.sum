@@ -40,6 +40,8 @@ github.com/huoshan017/mysql-go v0.0.0-20230415101517-a60dd29245de h1:IIXfs+p3hBI
 github.com/huoshan017/mysql-go v0.0.0-20230415101517-a60dd29245de/go.mod h1:UegGP6cESFa4DfEYJvx6GuYoK8xQWv5rubjfvyDVICE=
 github.com/huoshan017/ponu v0.0.0-20230418061437-64be33c5807e h1:pFcR7NKshkt6nc0FPijIyNok4/yH1q4cN5pM+uPyiuo=
 github.com/huoshan017/ponu v0.0.0-20230418061437-64be33c5807e/go.mod h1:dbwSRHOrAANody1Gjv6Gs27IrrjT82E8DU3DQEdFDyo=
+github.com/huoshan017/ponu v0.0.0-20230512061801-51e3b99be430 h1:53yEY579/wY5CFTl8Pupj2XrwmfHSPss4cIUsv3EE/c=
+github.com/huoshan017/ponu v0.0.0-20230512061801-51e3b99be430/go.mod h1:dbwSRHOrAANody1Gjv6Gs27IrrjT82E8DU3DQEdFDyo=
 github.com/kr/pretty v0.2.1 h1:Fmg33tUaq4/8ym9TJN1x7sLJnHVwhP33CNkpYV/7rwI=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=

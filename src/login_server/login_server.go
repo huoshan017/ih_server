@@ -41,7 +41,7 @@ type LoginServer struct {
 	account_aaid_table *login_db.AccountAAIdTable
 	start_time         time.Time
 	quit               bool
-	shutdown_lock      *sync.Mutex
+	shutdown_lock      sync.Mutex
 	shutdown_completed bool
 	ticker             *timer.TickTimer
 	initialized        bool
@@ -53,7 +53,7 @@ type LoginServer struct {
 	redis_conn *utils.RedisConn
 
 	acc2c_wait      map[string]*WaitCenterInfo
-	acc2c_wait_lock *sync.RWMutex
+	acc2c_wait_lock sync.RWMutex
 }
 
 var server *LoginServer
@@ -78,9 +78,7 @@ func (server *LoginServer) Init() (ok bool) {
 	server.ban_player_table = tables.GetBanPlayerTable()
 
 	server.start_time = time.Now()
-	server.shutdown_lock = &sync.Mutex{}
 	server.acc2c_wait = make(map[string]*WaitCenterInfo)
-	server.acc2c_wait_lock = &sync.RWMutex{}
 	server.redis_conn = &utils.RedisConn{}
 	//account_mgr_init()
 
@@ -656,11 +654,11 @@ func login_handler(account, password, channel, client_os, aaid string) (err_code
 	)
 	accInfo, o := server.accountMgr.Get(account)
 	if !o {
+		accInfo = newAccountInfo()
+		server.accountMgr.Set(account, accInfo)
 		acc_row, err := server.account_table.SelectByPrimaryField(account)
 		if err == nil {
-			accInfo = newAccountInfo()
 			accInfo.acc_row = acc_row
-			server.accountMgr.Set(account, accInfo)
 		} else {
 			if err == mysql_base.ErrNoRows {
 				isNew = true

@@ -9,7 +9,7 @@ require (
 	github.com/gomodule/redigo v1.8.9
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/huoshan017/mysql-go v0.0.0-20230415101517-a60dd29245de
-	github.com/huoshan017/ponu v0.0.0-20230418061437-64be33c5807e
+	github.com/huoshan017/ponu v0.0.0-20230512061801-51e3b99be430
 	github.com/orcaman/concurrent-map v0.0.0-20210501183033-44dafcb38ecc
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tealeg/xlsx v0.0.0-20181024002044-dbf71b6a931e

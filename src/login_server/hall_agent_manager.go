@@ -429,7 +429,7 @@ func H2LHallServerRegisterHandler(conn *server_conn.ServerConn, m proto.Message)
 	log.Trace("大厅服务器[%d %s %s]已连接", server_id, server_name, a.listen_client_ip)
 }
 
-func H2LAccountLogoutNotifyHandler(conn *server_conn.ServerConn, m proto.Message) {
+func H2LAccountLogoutNotifyHandler(_ *server_conn.ServerConn, m proto.Message) {
 	req := m.(*msg_server_message.H2LAccountLogoutNotify)
 	if req == nil {
 		log.Error("H2LAccountLogoutNotifyHandler param invalid")
@@ -445,7 +445,7 @@ func H2LAccountLogoutNotifyHandler(conn *server_conn.ServerConn, m proto.Message
 	log.Trace("Account %v log out notify", req.GetAccount())
 }
 
-func H2LAccountBanHandler(conn *server_conn.ServerConn, m proto.Message) {
+func H2LAccountBanHandler(_ *server_conn.ServerConn, m proto.Message) {
 	req := m.(*msg_server_message.H2LAccountBan)
 	if req == nil {
 		log.Error("H2LAccountBanHandler msg invalid")
